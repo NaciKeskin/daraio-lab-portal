@@ -4006,9 +4006,11 @@ async function fbGet(col) {
     return d.exists() ? (d.data().items ?? d.data().value ?? null) : null;
   } catch(e) { console.warn('fbGet error', col, e); return null; }
 }
+const _PORTAL_TOKEN = "56d754050eb3d261634d2c7b2b38b12c05d12c7271857d787fd144e8b35946dd";
 async function fbSet(col, data) {
   try {
     const payload = Array.isArray(data) ? { items: data } : { value: data };
+    payload.__auth = _PORTAL_TOKEN;
     await window._fsSetDoc(window._fsDoc(window._db, 'lab', col), payload);
   } catch(e) { console.warn('fbSet error', col, e); }
 }
