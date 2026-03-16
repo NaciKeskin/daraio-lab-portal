@@ -882,11 +882,71 @@
   .confirm-msg { font-size:13px;color:var(--muted);margin-bottom:20px;line-height:1.5; }
   .confirm-btns { display:flex;gap:8px;justify-content:flex-end; }
 
+
+  /* Firebase loading overlay */
+  #fb-loading {
+    position:fixed;inset:0;background:var(--bg);z-index:99999;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;
+    transition:opacity 0.4s;
+  }
+  #fb-loading.fade-out { opacity:0;pointer-events:none; }
+  .fb-spinner {
+    width:40px;height:40px;border:3px solid var(--border);
+    border-top-color:var(--accent);border-radius:50%;
+    animation:spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  #fb-loading p { font-size:14px;color:var(--muted); }
+  #fb-offline-banner {
+    display:none;position:fixed;bottom:16px;left:50%;transform:translateX(-50%);
+    background:var(--danger);color:#fff;padding:10px 20px;border-radius:8px;
+    font-size:13px;font-weight:500;z-index:9999;box-shadow:var(--shadow-lg);
+  }
+
 </style>
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getFirestore, doc, getDoc, setDoc, onSnapshot, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBUZt8REyhEE-49BvndMFUYBCbuPveNfsI",
+      authDomain: "daraio-lab-portal.firebaseapp.com",
+      projectId: "daraio-lab-portal",
+      storageBucket: "daraio-lab-portal.firebasestorage.app",
+      messagingSenderId: "933995842211",
+      appId: "1:933995842211:web:e59f30b76565eb57e54d16"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // ── Expose to global scope for use by non-module scripts ──
+    window._db = db;
+    window._fsDoc = doc;
+    window._fsGetDoc = getDoc;
+    window._fsSetDoc = setDoc;
+    window._fsOnSnapshot = onSnapshot;
+    window._fsCollection = collection;
+    window._fsGetDocs = getDocs;
+    window._firebaseReady = true;
+
+    // Notify the app that Firebase is ready
+    window.dispatchEvent(new Event('firebaseReady'));
+  </script>
+
 </head>
 <body>
 
 <!-- ACCESS SCREEN -->
+
+<!-- Firebase loading overlay -->
+<div id="fb-loading">
+  <div class="fb-spinner"></div>
+  <p>Connecting to lab database...</p>
+</div>
+<div id="fb-offline-banner">⚠️ You are offline — changes will not be saved</div>
+
 <div id="access-screen">
   <div class="access-card">
     <div class="access-logo">
@@ -3919,9 +3979,152 @@ function customConfirm(msg, onYes, title='Are you sure?', okLabel='Delete') {
   overlay.onclick = (e) => { if(e.target===overlay){ cleanup(); close(); } };
 }
 
+
+// ══════════════════════════════════════════════════════════════
+// FIREBASE DATA LAYER
+// Replaces localStorage with Firestore for all shared data.
+// LocalStorage is kept only for UI preferences (theme, codes).
+// ══════════════════════════════════════════════════════════════
+
+const FB_COLLECTIONS = {
+  equipment:   'dl_equipment',
+  chemicals:   'dl_chemicals',
+  projects:    'dl_projects',
+  instruments: 'dl_instruments',
+  maint:       'dl_maint',
+  bookings:    'dl_bookings',
+  hvitems:     'dl_hvitems',
+  regusers:    'dl_regusers',
+  history:     'dl_history',
+  settings:    'dl_settings',
+};
+
+// ── Generic read/write helpers ──
+async function fbGet(col) {
+  try {
+    const d = await window._fsGetDoc(window._fsDoc(window._db, 'lab', col));
+    return d.exists() ? (d.data().items ?? d.data().value ?? null) : null;
+  } catch(e) { console.warn('fbGet error', col, e); return null; }
+}
+async function fbSet(col, data) {
+  try {
+    const payload = Array.isArray(data) ? { items: data } : { value: data };
+    await window._fsSetDoc(window._fsDoc(window._db, 'lab', col), payload);
+  } catch(e) { console.warn('fbSet error', col, e); }
+}
+
+// ── Override all save functions to write to Firestore ──
+function saveEquipData()   { fbSet('dl_equipment',   equipment);    localStorage.setItem('dl_equipment',   JSON.stringify(equipment)); }
+function saveChemData()    { fbSet('dl_chemicals',    chemicals);    localStorage.setItem('dl_chemicals',   JSON.stringify(chemicals)); }
+function saveProjData()    { fbSet('dl_projects',     projects);     localStorage.setItem('dl_projects',    JSON.stringify(projects)); }
+function saveInstData()    { fbSet('dl_instruments',  instruments);  localStorage.setItem('dl_instruments', JSON.stringify(instruments)); }
+function saveMaintData()   { fbSet('dl_maint',        maintLog);     localStorage.setItem('dl_maint',       JSON.stringify(maintLog)); }
+function saveBookingData() { fbSet('dl_bookings',     bookings);     localStorage.setItem('dl_bookings',    JSON.stringify(bookings)); }
+function saveHVData()      { fbSet('dl_hvitems',      hvItems);      localStorage.setItem('dl_hvitems',     JSON.stringify(hvItems)); }
+function saveRegUsers()    { fbSet('dl_regusers',     regUsers);     localStorage.setItem('dl_regusers',    JSON.stringify(regUsers)); }
+function saveHistory()     { fbSet('dl_history',      changeHistory);localStorage.setItem('dl_history',    JSON.stringify(changeHistory)); }
+
+// ── Load all data from Firestore, fall back to localStorage seeded data ──
+async function loadAllFromFirebase() {
+  const loaders = [
+    { key: 'dl_equipment',   varSetter: v => { equipment   = v; } },
+    { key: 'dl_chemicals',   varSetter: v => { chemicals   = v; } },
+    { key: 'dl_projects',    varSetter: v => { projects    = v; } },
+    { key: 'dl_instruments', varSetter: v => { instruments = v; } },
+    { key: 'dl_maint',       varSetter: v => { maintLog    = v; } },
+    { key: 'dl_bookings',    varSetter: v => { bookings    = v; } },
+    { key: 'dl_hvitems',     varSetter: v => { hvItems     = v; } },
+    { key: 'dl_regusers',    varSetter: v => { regUsers    = v; } },
+    { key: 'dl_history',     varSetter: v => { changeHistory = v; } },
+  ];
+
+  for (const loader of loaders) {
+    const fbData = await fbGet(loader.key);
+    if (fbData !== null) {
+      loader.varSetter(Array.isArray(fbData) ? fbData : [fbData]);
+      // Also sync to localStorage as local cache
+      localStorage.setItem(loader.key, JSON.stringify(Array.isArray(fbData) ? fbData : [fbData]));
+    } else {
+      // First run: use localStorage seeded data and push to Firebase
+      const local = JSON.parse(localStorage.getItem(loader.key) || 'null');
+      if (local !== null) {
+        loader.varSetter(local);
+        await fbSet(loader.key, local); // Seed Firebase with import data
+      }
+    }
+  }
+
+  // Load settings (access codes) from Firebase too
+  const settings = await fbGet('dl_settings');
+  if (settings) {
+    if (settings.generalCode) localStorage.setItem('dl_general_code', settings.generalCode);
+    if (settings.adminCode)   localStorage.setItem('dl_admin_code',   settings.adminCode);
+  }
+}
+
+// ── Override settings save functions to also push to Firebase ──
+const _origSaveGeneralCode = saveGeneralCode;
+saveGeneralCode = function() {
+  _origSaveGeneralCode();
+  const gc = localStorage.getItem('dl_general_code') || '1234';
+  const ac = localStorage.getItem('dl_admin_code')   || '0000';
+  fbSet('dl_settings', { generalCode: gc, adminCode: ac });
+};
+const _origSaveAdminCode = saveAdminCode;
+saveAdminCode = function() {
+  _origSaveAdminCode();
+  const gc = localStorage.getItem('dl_general_code') || '1234';
+  const ac = localStorage.getItem('dl_admin_code')   || '0000';
+  fbSet('dl_settings', { generalCode: gc, adminCode: ac });
+};
+
+// ── Override exportJSON to also include Firebase data ──
+const _origExportJSON = exportJSON;
+exportJSON = async function() {
+  // Ensure we have latest data
+  const data = {
+    version: 2,
+    exported: new Date().toISOString(),
+    equipment, chemicals, projects, instruments,
+    maintenance: maintLog, bookings, hvItems,
+    regUsers, history: changeHistory,
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = 'daraio-lab-backup-' + new Date().toISOString().slice(0,10) + '.json';
+  link.click();
+  logChange('Edited', 'Settings', 'Data Export', 'Full backup exported');
+};
+
+// ── Offline detection ──
+window.addEventListener('online',  () => { document.getElementById('fb-offline-banner').style.display='none'; });
+window.addEventListener('offline', () => { document.getElementById('fb-offline-banner').style.display='block'; });
+
+// ── Bootstrap: wait for Firebase then load data then init app ──
+async function bootstrapApp() {
+  const loadingEl = document.getElementById('fb-loading');
+  try {
+    await loadAllFromFirebase();
+  } catch(e) {
+    console.warn('Firebase load failed, using local data:', e);
+  }
+  // Hide loading overlay
+  loadingEl.classList.add('fade-out');
+  setTimeout(() => { loadingEl.style.display = 'none'; }, 400);
+
+  // Run the original INIT that seeds localStorage and renders tables
+  _origInit();
+}
+
+// ── Capture the original init function ──
+// (the IIFE at the bottom that seeds equipment/chemicals/projects)
+// We replace it below after defining bootstrapApp.
+
+
 // ── INIT ──
 // Pre-load spreadsheet data if localStorage is empty
-(function() {
+function _origInit() { (function() {
   if (!localStorage.getItem('dl_equipment') || JSON.parse(localStorage.getItem('dl_equipment')).length === 0) {
     localStorage.setItem('dl_equipment', JSON.stringify([{"id": "import_00001", "name": "Balance", "company": "AeAdam", "model": "PW124", "serial": "", "category": "Balance", "qty": 1, "status": "Available", "location": "B255C", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00002", "name": "Signal generator", "company": "Agilent", "model": "33220A", "serial": "", "category": "Signal generator", "qty": 1, "status": "Available", "location": "B255", "locationDetail": "", "details": "5 different models", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00003", "name": "Digital Oscilliscope", "company": "Agilent Technologies", "model": "DSO-X 3014A", "serial": "", "category": "Oscilloscopes", "qty": 1, "status": "Available", "location": "B255", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00004", "name": "3D bioprinter", "company": "Allevi", "model": "2", "serial": "", "category": "3D printers", "qty": 1, "status": "Available", "location": "B255D", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00005", "name": "High speed Camera", "company": "Ametek", "model": "Phantom V1610", "serial": "", "category": "Camera", "qty": 1, "status": "Available", "location": "B255", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00006", "name": "Multiaxis force torque sensor", "company": "ATI industrial automation", "model": "F/T sensor mini85", "serial": "", "category": "Torque sensor", "qty": 1, "status": "Available", "location": "B255", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00007", "name": "Power suppliers", "company": "BK Precision", "model": "", "serial": "", "category": "Power soppliers", "qty": 1, "status": "Available", "location": "B255", "locationDetail": "", "details": "6 or 7", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00008", "name": "Power amplifier", "company": "Bruel & Kjaer", "model": "2718", "serial": "", "category": "Amplifiers", "qty": 1, "status": "Available", "location": "B255", "locationDetail": "", "details": "5 different models", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00009", "name": "Dynamic shaker", "company": "Bruel & Kjaer", "model": "Type 4810", "serial": "", "category": "Dynamic actuators", "qty": 1, "status": "Available", "location": "B255", "locationDetail": "", "details": "3 shakers, 2 of them broken and one functional", "lastEditedBy": "Naci Keskin", "lastEditedDate": "2026-02-12T00:00:00", "createdDate": "2026-02-12T00:00:00"}, {"id": "import_00010", "name": "Overhead mixer", "company": "Caframo", "model": "", "serial": "", "category": "Mixers", "qty": 1, "status": "Available", "location": "B255", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00011", "name": "Stencils cutter", "company": "Cameo", "model": "", "serial": "", "category": "Cuter", "qty": 1, "status": "Available", "location": "B255C", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00012", "name": "Tube furnace for CNT growth", "company": "Carbolite", "model": "", "serial": "", "category": "Nanoscience", "qty": 1, "status": "Available", "location": "B255B", "locationDetail": "", "details": "Disassabled system", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00013", "name": "Partial / base of probe station", "company": "Cascade Microtech", "model": "M150", "serial": "", "category": "", "qty": 1, "status": "Available", "location": "B255", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00014", "name": "Balance", "company": "Citizon", "model": "CX 205", "serial": "", "category": "Balance", "qty": 1, "status": "Available", "location": "B255B", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00015", "name": "Custrom Peltier Temperatrue Control system", "company": "Daraio Lab / Vincenzo Costanza", "model": "Custom", "serial": "", "category": "", "qty": 1, "status": "Available", "location": "B255", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00016", "name": "Super computers", "company": "Dell", "model": "", "serial": "", "category": "Computers", "qty": 1, "status": "Available", "location": "B255", "locationDetail": "", "details": "2", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00017", "name": "Resin Cleaning and Curing Tank", "company": "Elegoo", "model": "Mercury Plus V3.0", "serial": "", "category": "3D printers", "qty": 1, "status": "Available", "location": "B255B", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-10-13T00:00:00", "createdDate": "2025-10-13T00:00:00"}, {"id": "import_00018", "name": "MARS 4 DLP printer", "company": "Elegoo", "model": "9k", "serial": "", "category": "3D printers", "qty": 1, "status": "Available", "location": "B255B", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-10-13T00:00:00", "createdDate": "2025-10-13T00:00:00"}, {"id": "import_00019", "name": "FDM printer", "company": "Ender", "model": "Ender-3", "serial": "", "category": "3D printers", "qty": 1, "status": "Available", "location": "B255B", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00020", "name": "Centrifuge", "company": "Eppendorf", "model": "5804", "serial": "", "category": "Centrifuge", "qty": 1, "status": "Available", "location": "B255B", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00021", "name": "Ultrasound transducer", "company": "Evident", "model": "V318 0.5 MHz", "serial": "", "category": "Ultrasound", "qty": 1, "status": "Available", "location": "B255", "locationDetail": "", "details": "2", "lastEditedBy": "Naci Keskin", "lastEditedDate": "2025-04-21T11:36:45", "createdDate": "2025-04-21T11:36:45"}, {"id": "import_00022", "name": "Micromechanical testing", "company": "Femto tools", "model": "", "serial": "", "category": "Mechanical", "qty": 1, "status": "Available", "location": "B255", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00023", "name": "Sonicator bath", "company": "FischerBrand", "model": "FB11201", "serial": "", "category": "Sonication", "qty": 1, "status": "Available", "location": "B255C", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00024", "name": "Speed mixer", "company": "Hauschild", "model": "DAC 150.3 FVZ", "serial": "", "category": "Mixers", "qty": 1, "status": "Available", "location": "B255D", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00025", "name": "Instron", "company": "Instron", "model": "E3000", "serial": "", "category": "Mechanical", "qty": 1, "status": "Available", "location": "B255", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00026", "name": "250 N Load Cell", "company": "Instron", "model": "", "serial": "", "category": "Mechanical", "qty": 1, "status": "Available", "location": "B255", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-10-13T00:00:00", "createdDate": "2025-10-13T00:00:00"}, {"id": "import_00027", "name": "2.5 kN Load Cell", "company": "Instron", "model": "", "serial": "", "category": "Mechanical", "qty": 1, "status": "Available", "location": "B255", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-10-13T00:00:00", "createdDate": "2025-10-13T00:00:00"}, {"id": "import_00028", "name": "Xenon light source", "company": "Karl Storz", "model": "Xenon Nova 300", "serial": "", "category": "Laser", "qty": 1, "status": "Available", "location": "B255", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00029", "name": "Cooling system + cooling plate", "company": "Koolance", "model": "COV-RP400", "serial": "", "category": "", "qty": 1, "status": "Available", "location": "B255", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00030", "name": "Stereo microscope", "company": "Leica", "model": "S6D", "serial": "", "category": "Microsocpy", "qty": 1, "status": "Available", "location": "B255", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00031", "name": "Fridge", "company": "Liebherr", "model": "", "serial": "", "category": "Cooling", "qty": 1, "status": "Available", "location": "B255D", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00032", "name": "System New", "company": "Make", "model": "Model", "serial": "", "category": "Category", "qty": 1, "status": "Available", "location": "Room", "locationDetail": "", "details": "Obser", "lastEditedBy": "", "lastEditedDate": "", "createdDate": ""}, {"id": "import_00033", "name": "Balance", "company": "Mettler Toledo", "model": "XS205", "serial": "", "category": "Balance", "qty": 1, "status": "Available", "location": "B255D", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00034", "name": "Tubing(Variety)", "company": "NA", "model": "NA", "serial": "", "category": "", "qty": 1, "status": "Available", "location": "B255", "locationDetail": "Storage Area, in the black bin", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-04-25T16:26:48", "createdDate": "2025-04-25T16:26:48"}, {"id": "import_00035", "name": "Terminal Block", "company": "National Instruments", "model": "BNC-211", "serial": "", "category": "", "qty": 1, "status": "Available", "location": "B255", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-02-25T15:15:20", "createdDate": "2025-02-25T15:15:20"}, {"id": "import_00036", "name": "Multifunctional I/O", "company": "National Instruments", "model": "NI USB-6008", "serial": "", "category": "", "qty": 1, "status": "Available", "location": "", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00037", "name": "Shaker", "company": "New Brunswik  Scientific", "model": "Innova 2000", "serial": "", "category": "Mixers", "qty": 1, "status": "Available", "location": "B255D", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00038", "name": "Incubator shaker", "company": "New Brunswik  Scientific", "model": "Excella E24", "serial": "", "category": "Chambers", "qty": 1, "status": "Available", "location": "B255D", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00039", "name": "Various Detectors & Cameras", "company": "Newport", "model": "", "serial": "", "category": "", "qty": 1, "status": "Available", "location": "", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00040", "name": "Misillanious Optics & Optomechanics", "company": "Newport", "model": "", "serial": "", "category": "Optics", "qty": 1, "status": "Available", "location": "B255", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00041", "name": "Optical microsocpe", "company": "Nikon", "model": "Eclipse LV100", "serial": "", "category": "Microsocpy", "qty": 1, "status": "Available", "location": "B255", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00042", "name": "DHR camera", "company": "Nikon", "model": "D750", "serial": "", "category": "Camera", "qty": 1, "status": "Available", "location": "B255", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00043", "name": "CO2/Oxgyen Controller", "company": "OKO Labs", "model": "CO2/O2 Unit", "serial": "", "category": "CO2/O2 adjustment", "qty": 1, "status": "Available", "location": "B255D", "locationDetail": "Need to check exact location", "details": "Part of Equ. Inv.", "lastEditedBy": "Naci", "lastEditedDate": "2025-05-01T16:13:16", "createdDate": "2025-05-01T16:13:16"}, {"id": "import_00044", "name": "Ultrasound transducer", "company": "Olympus", "model": "V301 0.5 MHz", "serial": "", "category": "Ultrasound", "qty": 1, "status": "Available", "location": "B255", "locationDetail": "", "details": "1", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00045", "name": "Ultrasound transducer", "company": "Olympus", "model": "V302 1 MHz", "serial": "", "category": "Ultrasound", "qty": 1, "status": "Available", "location": "B255", "locationDetail": "", "details": "1", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00046", "name": "Ultrasound transducer", "company": "Olympus", "model": "V384 3.5 MHz", "serial": "", "category": "Ultrasound", "qty": 1, "status": "Available", "location": "B255", "locationDetail": "", "details": "2", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00047", "name": "Ultrasound transducer", "company": "Olympus", "model": "V316 20 MHz", "serial": "", "category": "Ultrasound", "qty": 1, "status": "Available", "location": "B255", "locationDetail": "", "details": "1", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00048", "name": "Ultrasound transducer", "company": "Olympus", "model": "V317 20 MHz", "serial": "", "category": "Ultrasound", "qty": 1, "status": "Available", "location": "B255", "locationDetail": "", "details": "1", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00049", "name": "Ultrasound transducer", "company": "Olympus", "model": "V356 30 MHz", "serial": "", "category": "Ultrasound", "qty": 1, "status": "Available", "location": "B255", "locationDetail": "", "details": "1", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00050", "name": "Ultrasound transducer", "company": "Olympus", "model": "V156 5 MHz", "serial": "", "category": "Ultrasound", "qty": 1, "status": "Available", "location": "B255", "locationDetail": "", "details": "3", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00051", "name": "Ultrasound transducer", "company": "Olympus", "model": "V106 2.5 MHz", "serial": "", "category": "Ultrasound", "qty": 1, "status": "Available", "location": "B255", "locationDetail": "", "details": "2", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00052", "name": "Ultrasound transducer", "company": "Olympus", "model": "V133 2.5 MHz", "serial": "", "category": "Ultrasound", "qty": 1, "status": "Available", "location": "B255", "locationDetail": "", "details": "2", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00053", "name": "Ultrasound transducer", "company": "Olympus", "model": "V112 10 MHz", "serial": "", "category": "Ultrasound", "qty": 1, "status": "Available", "location": "B255", "locationDetail": "", "details": "2", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00054", "name": "Ultrasound transducer", "company": "Olympus", "model": "V101 0.5 MHz", "serial": "", "category": "Ultrasound", "qty": 1, "status": "Available", "location": "B255", "locationDetail": "", "details": "2", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00055", "name": "Stereo microscope", "company": "Olympus", "model": "SZX16", "serial": "", "category": "Microsocpy", "qty": 1, "status": "Available", "location": "B255", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00056", "name": "3D stereomicroscope", "company": "Olympus", "model": "SZX2-FOF", "serial": "", "category": "Microsocpy", "qty": 1, "status": "Available", "location": "B255B", "locationDetail": "", "details": "Part of Equ. Inv.", "lastEditedBy": "Naci", "lastEditedDate": "2025-04-30T14:38:53", "createdDate": "2025-04-30T14:38:53"}, {"id": "import_00057", "name": "3D laser vibrometer  + scanning robot", "company": "Omnisensing Photonics", "model": "MotionGo", "serial": "", "category": "", "qty": 1, "status": "Available", "location": "B255", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00058", "name": "Enviromental chamber", "company": "Panasonic", "model": "MLR-352H-PA", "serial": "", "category": "Chambers", "qty": 1, "status": "Available", "location": "B255D", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00059", "name": "Autoclave", "company": "Panasonic", "model": "MLS-3781L", "serial": "", "category": "Autoclave", "qty": 1, "status": "Available", "location": "B255C", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00060", "name": "Aplifier", "company": "PCB", "model": "482C", "serial": "", "category": "", "qty": 1, "status": "Available", "location": "", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00061", "name": "Turbopump", "company": "PFEIFFER Vacuum", "model": "HiCube 80 eco", "serial": "", "category": "Pumps", "qty": 1, "status": "Available", "location": "B255", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00062", "name": "Laser doppler vibometer", "company": "Polytec", "model": "OFV-5000", "serial": "", "category": "Laser", "qty": 1, "status": "Available", "location": "B255", "locationDetail": "", "details": "2", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00063", "name": "Laser doppler vibometer", "company": "Polytec", "model": "CLV-2534", "serial": "", "category": "Laser", "qty": 1, "status": "Available", "location": "B255", "locationDetail": "", "details": "Part of Equ. Inv.", "lastEditedBy": "", "lastEditedDate": "2025-04-30T14:50:08", "createdDate": "2025-04-30T14:50:08"}, {"id": "import_00064", "name": "Laser doppler vibometer", "company": "Polytec", "model": "OFV-505", "serial": "", "category": "Laser", "qty": 1, "status": "Available", "location": "B255", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00065", "name": "Water Tank + 3D Scanning Robot", "company": "Precision acoustics", "model": "", "serial": "", "category": "Ultrasound/Water", "qty": 1, "status": "Available", "location": "B255", "locationDetail": "", "details": "Perfectly sealed and functioning.", "lastEditedBy": "Naci", "lastEditedDate": "2025-02-25T15:15:33", "createdDate": "2025-02-25T15:15:33"}, {"id": "import_00066", "name": "Hydrophone", "company": "Precision acoustics", "model": "5 mm", "serial": "", "category": "Hydrophones", "qty": 1, "status": "Available", "location": "B255", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00067", "name": "Hydrophone", "company": "Precision acoustics", "model": "0.2 mm", "serial": "", "category": "Hydrophones", "qty": 1, "status": "Available", "location": "B255", "locationDetail": "", "details": "2", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00068", "name": "2w Brilliant NdYAG laser", "company": "Quantel", "model": "2w Brilliant", "serial": "", "category": "Laser", "qty": 1, "status": "Available", "location": "B255", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00069", "name": "HeNe Laser", "company": "Research Electro-Optics", "model": "30995", "serial": "", "category": "Laser", "qty": 1, "status": "Available", "location": "B255", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00070", "name": "HeNe Laser", "company": "Research Electro-Optics", "model": "R-30995", "serial": "", "category": "Laser", "qty": 1, "status": "Available", "location": "B255", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00071", "name": "Helium Neon Laser Power Supply", "company": "Research Electro-Optics", "model": "", "serial": "", "category": "Laser", "qty": 1, "status": "Available", "location": "B255", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00072", "name": "Helium Neon Laser Power Supply", "company": "Research Electro-Optics", "model": "", "serial": "", "category": "Laser", "qty": 1, "status": "Available", "location": "B255", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00073", "name": "Laser sintering", "company": "Sintratec", "model": "", "serial": "", "category": "3D printers", "qty": 1, "status": "Available", "location": "B255B", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00074", "name": "3D Printer", "company": "Sintratec", "model": "KIT, 2018", "serial": "", "category": "3D printers", "qty": 1, "status": "Available", "location": "B255B", "locationDetail": "", "details": "Part of Equ. Inv.", "lastEditedBy": "Naci", "lastEditedDate": "2025-04-30T14:37:17", "createdDate": "2025-04-30T14:37:17"}, {"id": "import_00075", "name": "Sonicator tip", "company": "Sonics", "model": "vibra cell", "serial": "", "category": "Sonication", "qty": 1, "status": "Available", "location": "B255B", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00076", "name": "Small Instrumentation Moduels", "company": "Stanford Research Systems", "model": "SIMS960 Analog PID Controller; SIM965 Analog Filter; SIM900 Mainframe", "serial": "", "category": "", "qty": 1, "status": "Available", "location": "", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00077", "name": "Object Connex", "company": "Stratasys", "model": "500", "serial": "", "category": "3D printers", "qty": 1, "status": "Available", "location": "Firestone", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00078", "name": "Microwave oven", "company": "Sunbeam", "model": "", "serial": "", "category": "Ovens", "qty": 1, "status": "Available", "location": "B255", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00079", "name": "Curing box", "company": "Sunlu", "model": "", "serial": "", "category": "Curing", "qty": 1, "status": "Available", "location": "B255B", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00080", "name": "Spin coater", "company": "Suss Microtec", "model": "", "serial": "", "category": "Spin coating", "qty": 1, "status": "Available", "location": "B255C", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00081", "name": "TGA", "company": "TA Instruments", "model": "D550", "serial": "", "category": "Thermal", "qty": 1, "status": "Available", "location": "B255C", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00082", "name": "Rheometer", "company": "TA Instruments", "model": "DHR 20", "serial": "", "category": "Rheometer", "qty": 1, "status": "Available", "location": "B255C", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00083", "name": "Triggered Short Pulse Laser", "company": "TEEM Photonics", "model": "STG-03E-140", "serial": "", "category": "Laser", "qty": 1, "status": "Available", "location": "B255", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00084", "name": "Microchip laser controller", "company": "TEEM Photonics", "model": "Microchip Controller", "serial": "", "category": "", "qty": 1, "status": "Available", "location": "", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00085", "name": "Real Time Spectrum Analyzer", "company": "Tektronix", "model": "RSA603A Real Time Spectrum Analyzer", "serial": "", "category": "", "qty": 1, "status": "Available", "location": "B255", "locationDetail": "", "details": "", "lastEditedBy": "Naci Keskin", "lastEditedDate": "2025-03-24T00:00:00", "createdDate": "2025-03-24T00:00:00"}, {"id": "import_00086", "name": "Oscillocope trigger", "company": "Tektronix", "model": "DPO 3034", "serial": "", "category": "", "qty": 1, "status": "Available", "location": "B255", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00087", "name": "Humidity Controlled Glovebox", "company": "Terra Universal", "model": "SMART GLOVEBOX; 304 SS", "serial": "", "category": "Glovebox", "qty": 1, "status": "Available", "location": "B255B", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00088", "name": "Box test for sync", "company": "Test from the web", "model": "", "serial": "", "category": "", "qty": 1, "status": "Available", "location": "", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-04-24T17:11:53", "createdDate": "2025-04-24T17:11:53"}, {"id": "import_00089", "name": "Laminar hood", "company": "Thermoscientific", "model": "HearGuard ECO", "serial": "", "category": "Chemical", "qty": 1, "status": "Available", "location": "B255D", "locationDetail": "", "details": "Display not working", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00090", "name": "Hot plates", "company": "Thermoscientific", "model": "", "serial": "", "category": "Hot plates", "qty": 1, "status": "Available", "location": "B255", "locationDetail": "", "details": "we have 6, some either stir or heat but not both", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00091", "name": "Fridge", "company": "Thermoscientific", "model": "", "serial": "", "category": "Cooling", "qty": 1, "status": "Available", "location": "B255B", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00092", "name": "Convection oven", "company": "Thermoscientific", "model": "PR305225G", "serial": "", "category": "Ovens", "qty": 1, "status": "Available", "location": "B255B", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00093", "name": "Various Detectors & Cameras", "company": "Thorlabs", "model": "", "serial": "", "category": "", "qty": 1, "status": "Available", "location": "", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00094", "name": "Misillanious Optics & Optomechanics", "company": "Thorlabs", "model": "", "serial": "", "category": "Optics", "qty": 1, "status": "Available", "location": "B255", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00095", "name": "50MHz Function/Pulse Generator", "company": "TTI", "model": "TG5011A", "serial": "", "category": "", "qty": 1, "status": "Available", "location": "", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00096", "name": "Linear model stage", "company": "Vexta", "model": "PK266-03A-PI", "serial": "", "category": "Model stage", "qty": 1, "status": "Available", "location": "B255", "locationDetail": "", "details": "5, different lengths", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00097", "name": "Linear motorized stage", "company": "Vexta", "model": "PK266-03A-P1", "serial": "", "category": "Motorized stages", "qty": 1, "status": "Available", "location": "B255", "locationDetail": "", "details": "6", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00098", "name": "2D DIC camera system + software", "company": "Vic", "model": "2D 2009", "serial": "", "category": "", "qty": 1, "status": "Available", "location": "B255", "locationDetail": "", "details": "Wors with usb license key", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00099", "name": "Digital vortex mixer", "company": "VWR", "model": "", "serial": "", "category": "Mixers", "qty": 1, "status": "Available", "location": "B255B", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00100", "name": "Bench grinder", "company": "Wen", "model": "6502T", "serial": "", "category": "Sample prep", "qty": 1, "status": "Available", "location": "B255", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00101", "name": "Mini freezer", "company": "Whynter", "model": "", "serial": "", "category": "Cooling", "qty": 1, "status": "Available", "location": "B255D", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00102", "name": "Muffle Furnanca", "company": "Yamato", "model": "FO300CR", "serial": "", "category": "Ovens", "qty": 1, "status": "Available", "location": "B255", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00103", "name": "Optical microsocpe", "company": "Zeiss", "model": "Axio", "serial": "", "category": "Microsocpy", "qty": 1, "status": "Available", "location": "B255B", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00104", "name": "UHF Lock-In amplifier", "company": "Zurich Instruments", "model": "Lock-in Amplifier 600MHz", "serial": "", "category": "Amplifiers", "qty": 1, "status": "Available", "location": "B255", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00105", "name": "Impidance analyzer", "company": "Zurich instruments", "model": "MFIA", "serial": "", "category": "Impidance analyzer", "qty": 1, "status": "Available", "location": "B255", "locationDetail": "", "details": "2", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00106", "name": "Vacuum pumps", "company": "", "model": "", "serial": "", "category": "pumps", "qty": 1, "status": "Available", "location": "B255", "locationDetail": "", "details": "2?", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00107", "name": "Photo-gate sensor", "company": "", "model": "", "serial": "", "category": "", "qty": 1, "status": "Available", "location": "", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00108", "name": "Osciloscope", "company": "", "model": "", "serial": "", "category": "Oscilloscopes", "qty": 1, "status": "Available", "location": "B255", "locationDetail": "", "details": "5 different models", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00109", "name": "Force transducer at base", "company": "", "model": "", "serial": "", "category": "", "qty": 1, "status": "Available", "location": "", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00110", "name": "Drop tower #2:", "company": "", "model": "", "serial": "", "category": "", "qty": 1, "status": "Available", "location": "", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00111", "name": "Drop tower #1:", "company": "", "model": "", "serial": "", "category": "", "qty": 1, "status": "Available", "location": "", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00112", "name": "Custom built, steel base", "company": "", "model": "", "serial": "", "category": "", "qty": 1, "status": "Available", "location": "", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00113", "name": "Custom built, steel base", "company": "", "model": "", "serial": "", "category": "", "qty": 1, "status": "Available", "location": "", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00114", "name": "3m aluminium tube", "company": "", "model": "", "serial": "", "category": "", "qty": 1, "status": "Available", "location": "", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00115", "name": "3m acrylic tube", "company": "", "model": "", "serial": "", "category": "", "qty": 1, "status": "Available", "location": "", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}, {"id": "import_00116", "name": "3D scanner", "company": "", "model": "", "serial": "", "category": "", "qty": 1, "status": "Available", "location": "", "locationDetail": "", "details": "", "lastEditedBy": "", "lastEditedDate": "2025-02-05T00:00:00", "createdDate": "2025-02-05T00:00:00"}]));
     equipment = JSON.parse(localStorage.getItem('dl_equipment'));
@@ -3937,6 +4140,22 @@ function customConfirm(msg, onYes, title='Are you sure?', okLabel='Delete') {
 })();
 renderEquipTable();
 renderProjects();
+} // end _origInit
+
+// ── Start the app ──
+if (window._firebaseReady) {
+  bootstrapApp();
+} else {
+  window.addEventListener('firebaseReady', bootstrapApp);
+  // Safety timeout: if Firebase doesn't load in 5s, start anyway with local data
+  setTimeout(() => {
+    const loader = document.getElementById('fb-loading');
+    if (loader && loader.style.display !== 'none' && !loader.classList.contains('fade-out')) {
+      console.warn('Firebase timeout — starting with local data');
+      bootstrapApp();
+    }
+  }, 5000);
+}
 </script>
 
 <!-- Custom confirm dialog -->
