@@ -97,6 +97,17 @@
     transition: border 0.2s, box-shadow 0.2s;
   }
   .access-code-row input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(29,78,137,0.1); background: white; }
+  /* Suppress browser native password reveal button on code digits */
+  .code-digit::-ms-reveal,
+  .code-digit::-ms-clear,
+  .code-digit::-webkit-credentials-auto-fill-button { display: none !important; }
+  .access-code-reveal {
+    width:36px;height:52px;border:1.5px solid var(--border);border-radius:8px;
+    background:var(--bg);color:var(--muted);cursor:pointer;font-size:15px;
+    display:flex;align-items:center;justify-content:center;
+    transition:border-color 0.2s,color 0.2s;flex-shrink:0;
+  }
+  .access-code-reveal:hover { border-color:var(--accent);color:var(--accent); }
   .btn-primary {
     width: 100%; padding: 12px; background: var(--accent); color: white; border: none;
     border-radius: var(--radius); font-family: 'DM Sans', sans-serif;
@@ -969,11 +980,14 @@
     </div>
     <div class="field-group">
       <label>Access Code <span class="required">*</span></label>
-      <div class="access-code-row" id="code-inputs">
-        <input type="password" maxlength="1" class="code-digit" inputmode="numeric"/>
-        <input type="password" maxlength="1" class="code-digit" inputmode="numeric"/>
-        <input type="password" maxlength="1" class="code-digit" inputmode="numeric"/>
-        <input type="password" maxlength="1" class="code-digit" inputmode="numeric"/>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
+        <div class="access-code-row" id="code-inputs" style="margin-bottom:0;">
+          <input type="password" maxlength="1" class="code-digit" inputmode="numeric"/>
+          <input type="password" maxlength="1" class="code-digit" inputmode="numeric"/>
+          <input type="password" maxlength="1" class="code-digit" inputmode="numeric"/>
+          <input type="password" maxlength="1" class="code-digit" inputmode="numeric"/>
+        </div>
+        <button type="button" class="access-code-reveal" id="code-reveal-btn" onclick="toggleCodeReveal()" title="Show/hide code">&#x1F441;</button>
       </div>
     </div>
     <button class="btn-primary" onclick="attemptAccess()">Enter Portal →</button>
@@ -4123,6 +4137,18 @@ async function bootstrapApp() {
 // (the IIFE at the bottom that seeds equipment/chemicals/projects)
 // We replace it below after defining bootstrapApp.
 
+
+
+// ── Access code reveal toggle ──
+let _codeRevealed = false;
+function toggleCodeReveal() {
+  _codeRevealed = !_codeRevealed;
+  document.querySelectorAll('.code-digit').forEach(inp => {
+    inp.type = _codeRevealed ? 'text' : 'password';
+  });
+  const btn = document.getElementById('code-reveal-btn');
+  if (btn) btn.textContent = _codeRevealed ? '🙈' : '👁';
+}
 
 // ── INIT ──
 // Pre-load spreadsheet data if localStorage is empty
