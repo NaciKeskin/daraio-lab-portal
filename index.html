@@ -914,6 +914,81 @@
     font-size:13px;font-weight:500;z-index:9999;box-shadow:var(--shadow-lg);
   }
 
+
+  /* Expiry alerts dashboard */
+  .expiry-dashboard { background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:28px;box-shadow:var(--shadow); }
+  .expiry-dashboard-title { font-size:14px;font-weight:600;margin-bottom:14px;display:flex;align-items:center;gap:8px; }
+  .expiry-alert-list { display:flex;flex-direction:column;gap:6px;max-height:220px;overflow-y:auto; }
+  .expiry-alert-item { display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-radius:8px;font-size:13px;cursor:pointer;transition:opacity 0.15s; }
+  .expiry-alert-item:hover { opacity:0.85; }
+  .expiry-alert-item.expired { background:var(--danger-light);color:var(--danger); }
+  .expiry-alert-item.expiring { background:var(--warning-light);color:var(--warning); }
+  .expiry-alert-name { font-weight:500;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+  .expiry-alert-date { font-size:12px;margin-left:12px;flex-shrink:0; }
+  .expiry-empty { color:var(--muted);font-size:13px;text-align:center;padding:12px; }
+
+
+  /* Equipment checkout */
+  .checkout-badge { display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:10px;font-size:11px;font-weight:600; }
+  .checkout-badge.checked-out { background:var(--warning-light);color:var(--warning); }
+  .checkout-badge.available { background:var(--success-light);color:var(--success); }
+  .btn-checkout { padding:4px 10px;border-radius:6px;border:1px solid var(--border);font-size:12px;cursor:pointer;font-family:inherit;background:var(--surface);color:var(--text);transition:all 0.15s; }
+  .btn-checkout:hover { border-color:var(--accent);color:var(--accent); }
+  .btn-checkout.checkin { border-color:var(--success);color:var(--success);background:var(--success-light); }
+
+
+  /* Members directory */
+  .member-card {
+    background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+    padding:20px;display:flex;flex-direction:column;gap:8px;box-shadow:var(--shadow);
+    transition:box-shadow 0.15s,border-color 0.15s;
+  }
+  .member-card:hover { box-shadow:var(--shadow-lg);border-color:var(--accent-light); }
+  .member-avatar-lg {
+    width:48px;height:48px;border-radius:50%;background:var(--accent);
+    color:#fff;font-size:20px;font-weight:600;display:flex;align-items:center;justify-content:center;
+    margin-bottom:6px;flex-shrink:0;
+  }
+  .member-card-name { font-size:15px;font-weight:600; }
+  .member-card-email { font-size:12px;color:var(--muted); }
+  .member-card-role { font-size:12px;background:var(--accent-light);color:var(--accent);padding:2px 8px;border-radius:10px;width:fit-content; }
+  .member-card-notes { font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5; }
+
+
+  /* Notice board */
+  .notice-board { margin-bottom:24px; }
+  .notice-board-title { font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px; }
+  .notice-item {
+    background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+    padding:14px 16px;margin-bottom:10px;box-shadow:var(--shadow);
+    border-left:3px solid var(--accent);
+  }
+  .notice-item.urgent { border-left-color:var(--danger); }
+  .notice-item.info { border-left-color:var(--success); }
+  .notice-title { font-size:14px;font-weight:600;margin-bottom:4px; }
+  .notice-body { font-size:13px;color:var(--muted);line-height:1.5; }
+  .notice-meta { font-size:11px;color:var(--muted);margin-top:6px; }
+  .notice-actions { display:flex;gap:6px;margin-top:8px; }
+  .notice-empty { color:var(--muted);font-size:13px;font-style:italic; }
+  .btn-notice-add { padding:5px 12px;border:1px dashed var(--border);border-radius:8px;background:transparent;color:var(--muted);cursor:pointer;font-size:12px;font-family:inherit;transition:all 0.15s; }
+  .btn-notice-add:hover { border-color:var(--accent);color:var(--accent); }
+
+
+  /* Document library */
+  .doc-card {
+    background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+    padding:16px;display:flex;align-items:flex-start;gap:14px;box-shadow:var(--shadow);
+    transition:box-shadow 0.15s;
+  }
+  .doc-card:hover { box-shadow:var(--shadow-lg); }
+  .doc-icon { font-size:28px;flex-shrink:0; }
+  .doc-info { flex:1;min-width:0; }
+  .doc-name { font-size:14px;font-weight:600;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+  .doc-cat { font-size:11px;background:var(--accent-light);color:var(--accent);padding:2px 8px;border-radius:10px;width:fit-content;margin-bottom:6px; }
+  .doc-desc { font-size:12px;color:var(--muted);line-height:1.5; }
+  .doc-meta { font-size:11px;color:var(--muted);margin-top:6px; }
+  .doc-actions { display:flex;gap:6px;margin-top:8px;flex-wrap:wrap; }
+
 </style>
   <!-- Firebase SDK -->
   <script type="module">
@@ -1008,6 +1083,8 @@
       <button class="nav-tab" onclick="switchTab('projects')" id="tab-projects">📁 <span>Projects</span></button>
       <button class="nav-tab" onclick="switchTab('instruments')" id="tab-instruments">🔬 <span>Instruments</span></button>
       <button class="nav-tab" onclick="switchTab('highvalue')" id="tab-highvalue">💎 <span>High-Value Items</span></button>
+      <button class="nav-tab" onclick="switchTab('members')" id="tab-members">👥 <span>Lab Members</span></button>
+      <button class="nav-tab" onclick="switchTab('documents')" id="tab-documents">📚 <span>Documents</span></button>
       <button class="nav-tab admin-only-tab" onclick="switchTab('admin')" id="tab-admin" style="display:none;">🔐 <span>Admin</span></button>
     </nav>
     <div class="global-search-wrap">
@@ -1032,6 +1109,20 @@
       <h1>Daraio Lab Research Portal</h1>
       <p>A centralized hub for managing lab resources — from equipment and chemicals to ongoing projects and high-value instruments. Use the tabs above to navigate between sections.</p>
       <p class="hero-meta">Caltech · Daraio Research Group</p>
+    </div>
+    <div class="notice-board" id="notice-board">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <p class="notice-board-title" style="margin:0;">📌 Announcements</p>
+        <button class="btn-notice-add admin-only-btn" id="notice-add-btn" onclick="openNoticeModal(null)" style="display:none;">＋ Post</button>
+      </div>
+      <div id="notice-list"><div class="notice-empty">No announcements yet.</div></div>
+    </div>
+
+    <div class="expiry-dashboard" id="expiry-dashboard">
+      <div class="expiry-dashboard-title">⚠️ Chemical Expiry Alerts <span id="expiry-count-badge" style="background:var(--danger);color:#fff;font-size:11px;padding:2px 8px;border-radius:10px;font-weight:600;"></span></div>
+      <div class="expiry-alert-list" id="expiry-alert-list">
+        <div class="expiry-empty">Loading...</div>
+      </div>
     </div>
     <p class="home-sections-title">Portal Sections</p>
     <div class="home-cards">
@@ -1058,6 +1149,18 @@
         <h3>Instruments</h3>
         <p>A dedicated section for high-value instruments requiring formal training. Includes user manuals, training requirements, and booking information.</p>
         <span class="card-status live">&#x25CF; Active</span>
+      </div>
+      <div class="home-card" onclick="switchTab('documents')">
+        <div class="home-card-icon">📚</div>
+        <h3>Document Library</h3>
+        <p>Lab protocols, SOPs, safety documents, and onboarding materials all in one place.</p>
+        <span class="card-status live">● Active</span>
+      </div>
+      <div class="home-card" onclick="switchTab('members')">
+        <div class="home-card-icon">👥</div>
+        <h3>Lab Members</h3>
+        <p>Directory of current Daraio Research Group members with roles and contact info.</p>
+        <span class="card-status live">● Active</span>
       </div>
       <div class="home-card" onclick="switchTab('highvalue')">
         <div class="home-card-icon">💎</div>
@@ -1119,6 +1222,7 @@
             <th>Category</th>
             <th>Qty</th>
             <th>Status</th>
+            <th>Checkout</th>
             <th>Location</th>
             <th>Last Edited</th>
             <th>Actions</th>
@@ -1679,6 +1783,49 @@
     </div>
   </div>
 
+
+
+  <!-- DOCUMENT LIBRARY -->
+  <div class="page" id="page-documents">
+    <div class="page-header">
+      <div><h2>📚 Document Library</h2><p>Lab protocols, SOPs, safety docs, and onboarding materials.</p></div>
+      <button class="btn-add admin-only-btn" id="doc-add-btn" onclick="openDocModal(null)" style="display:none;">＋ Add Document</button>
+    </div>
+    <div class="toolbar" style="margin-bottom:20px;">
+      <div class="search-box"><span class="search-icon">🔍</span>
+        <input type="text" id="doc-search" placeholder="Search documents..." oninput="renderDocLibrary()"/>
+      </div>
+      <select class="filter-select" id="doc-filter-cat" onchange="renderDocLibrary()">
+        <option value="">All Categories</option>
+        <option value="SOP">SOPs</option>
+        <option value="Safety">Safety</option>
+        <option value="Protocol">Protocols</option>
+        <option value="Onboarding">Onboarding</option>
+        <option value="Other">Other</option>
+      </select>
+    </div>
+    <div id="doc-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;"></div>
+    <div id="doc-empty" class="empty-state" style="display:none;">
+      <div class="empty-icon">📚</div><h3>No documents yet</h3><p>Admins can add documents, links, and protocols using the button above.</p>
+    </div>
+  </div>
+
+  <!-- LAB MEMBERS DIRECTORY -->
+  <div class="page" id="page-members">
+    <div class="page-header">
+      <div><h2>👥 Lab Members</h2><p>Current members of the Daraio Research Group.</p></div>
+    </div>
+    <div class="toolbar" style="margin-bottom:20px;">
+      <div class="search-box"><span class="search-icon">🔍</span>
+        <input type="text" id="members-search" placeholder="Search by name, email, or role..." oninput="renderMembers()"/>
+      </div>
+    </div>
+    <div id="members-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;"></div>
+    <div id="members-empty" class="empty-state" style="display:none;">
+      <div class="empty-icon">👥</div><h3>No members yet</h3><p>Admin can add members in the Admin Panel.</p>
+    </div>
+  </div>
+
   <!-- ADMIN PANEL -->
   <div class="page" id="page-admin">
     <div class="page-header">
@@ -2205,6 +2352,7 @@ function attemptAccess() {
 function switchTab(tab) {
   document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  if(tab==='home') { setTimeout(renderExpiryDashboard, 50); setTimeout(renderNoticeBoard, 50); }
   const tabEl=document.getElementById('tab-'+tab);
   if(tabEl) tabEl.classList.add('active');
   const pageEl=document.getElementById('page-'+tab);
@@ -2214,6 +2362,8 @@ function switchTab(tab) {
   if(tab==='projects') renderProjects();
   if(tab==='instruments'){renderInstList();renderInstAlertBanner();}
   if(tab==='highvalue') { if(typeof renderHVTable==='function') renderHVTable(); }
+  if(tab==='members') { if(typeof renderMembers==='function') renderMembers(); }
+  if(tab==='documents') { if(typeof renderDocLibrary==='function') renderDocLibrary(); }
   if(tab==='admin') { if(typeof renderRegUsers==='function'){renderRegUsers();renderHistory();renderQRGrid();loadSettingsUI();} }
 }
 
@@ -2255,6 +2405,7 @@ function renderEquipTable() {
       <td>${e.category?`<span class="category-tag">${esc(e.category)}</span>`:'—'}</td>
       <td><span class="qty-badge">${e.qty}</span></td>
       <td><span class="status-badge ${getStatusClass(e.status)}"><span class="dot"></span>${esc(e.status)}</span></td>
+      <td>${(()=>{const co=checkouts[e.id];if(co)return '<span class="checkout-badge checked-out">📤 '+esc(co.by)+'</span><br><button class="btn-checkout checkin" onclick="toggleCheckout(\'' +e.id+ '\')">Check In</button>';return '<button class="btn-checkout" onclick="toggleCheckout(\'' +e.id+ '\')">Check Out</button>';})()}</td>
       <td><div>${esc(e.location||'—')}</div>${e.locationDetail?`<div class="meta-text">${esc(e.locationDetail)}</div>`:''}</td>
       <td><div class="meta-text">${esc(e.lastEditedBy||'—')}</div><div class="meta-text">${fmtDate(e.lastEditedDate)}</div></td>
       <td><div class="actions">
@@ -2402,6 +2553,7 @@ function renderChemTable(){
     let safetyHtml='—';
     if(c.safetyType==='link'&&c.safetyLink) safetyHtml=`<a href="${esc(c.safetyLink)}" target="_blank" class="safety-link">🔗 View SDS</a>`;
     else if(c.safetyType==='pdf'&&c.safetyFile) safetyHtml=`<a href="${c.safetyFile.dataUrl}" download="${esc(c.safetyFile.name)}" class="safety-link">📄 Download PDF</a>`;
+    else if(c.name) { const q=encodeURIComponent(c.name); safetyHtml=`<a href="https://pubchem.ncbi.nlm.nih.gov/compound/${q}" target="_blank" class="safety-link" style="color:var(--muted);font-size:11px;" title="Search PubChem">🔍 PubChem</a>`; }
     return `<tr>
       <td><div class="equip-name">${esc(c.name)}</div></td>
       <td>${c.formula?`<span style="font-family:'DM Mono',monospace;font-size:13px;">${esc(c.formula)}</span>`:'—'}</td>
@@ -3470,6 +3622,8 @@ function applyAdminMode() {
   document.getElementById('tab-admin').style.display = '';
   document.getElementById('home-admin-card').style.display = '';
   document.getElementById('hv-add-btn').style.display = '';
+  const nab = document.getElementById('notice-add-btn'); if(nab) nab.style.display='';
+  const dab = document.getElementById('doc-add-btn'); if(dab) dab.style.display='';
   document.getElementById('hv-actions-col').style.display = '';
   document.getElementById('hv-readonly-notice').style.display = 'none';
   renderHVTable();
@@ -4065,6 +4219,9 @@ async function loadAllFromFirebase() {
     { key: 'dl_hvitems',     varSetter: v => { hvItems     = v; } },
     { key: 'dl_regusers',    varSetter: v => { regUsers    = v; } },
     { key: 'dl_history',     varSetter: v => { changeHistory = v; } },
+    { key: 'dl_notices',     varSetter: v => { notices = v; } },
+    { key: 'dl_documents',   varSetter: v => { docLibrary = v; } },
+    { key: 'dl_checkouts',   varSetter: v => { checkouts = v; } },
   ];
 
   for (const loader of loaders) {
@@ -4179,6 +4336,181 @@ function toggleCodeReveal() {
   localStorage.setItem('dl_history',     '[{"id": "mmtqjjdy2j3kc", "action": "Edited", "section": "Instruments", "itemName": "Instron Electropuls E-3000", "details": "", "who": "Naci Keskin", "whoEmail": "mkeskin@caltech.edu", "ts": "2026-03-16T22:08:42.214Z"}, {"id": "mmtpc72kvvgml", "action": "Edited", "section": "Settings", "itemName": "Data Export", "details": "Full backup exported", "who": "Naci Keskin", "whoEmail": "mkeskin@caltech.edu", "ts": "2026-03-16T21:35:00.044Z"}, {"id": "mmtp93jcz41bd", "itemName": "Naci Keskin", "who": "Naci Keskin", "section": "Registered Users", "action": "Added", "details": "", "whoEmail": "mkeskin@caltech.edu", "ts": "2026-03-16T21:32:35.496Z"}]');
 })();
 
+
+// ── Expiry Alerts Dashboard ──
+function renderExpiryDashboard() {
+  const list = document.getElementById('expiry-alert-list');
+  const badge = document.getElementById('expiry-count-badge');
+  if (!list) return;
+  const now = new Date();
+  const alerts = [];
+  chemicals.forEach(c => {
+    if (!c.expiry) return;
+    const d = new Date(c.expiry);
+    const diff = (d - now) / (1000 * 60 * 60 * 24);
+    if (diff < 0) alerts.push({ ...c, status: 'expired', diff });
+    else if (diff < 90) alerts.push({ ...c, status: 'expiring', diff });
+  });
+  alerts.sort((a, b) => a.diff - b.diff);
+  if (badge) badge.textContent = alerts.length ? alerts.length + ' alert' + (alerts.length > 1 ? 's' : '') : '';
+  if (!alerts.length) {
+    list.innerHTML = '<div class="expiry-empty">✅ No chemicals expiring in the next 90 days</div>';
+    return;
+  }
+  list.innerHTML = alerts.slice(0, 15).map(c => {
+    const label = c.status === 'expired' ? `Expired ${Math.abs(Math.round(c.diff))}d ago` : `Expires in ${Math.round(c.diff)}d`;
+    return `<div class="expiry-alert-item ${c.status}" onclick="switchTab('chemistry')" title="Go to Chemical Inventory">
+      <span class="expiry-alert-name">${esc(c.name)}</span>
+      <span class="expiry-alert-date">${fmtDate(c.expiry)} · ${label}</span>
+    </div>`;
+  }).join('');
+}
+
+
+// ── Equipment Checkout ──
+let checkouts = JSON.parse(localStorage.getItem('dl_checkouts') || '{}');
+function saveCheckouts() {
+  localStorage.setItem('dl_checkouts', JSON.stringify(checkouts));
+  if(window._db) fbSet('dl_checkouts', checkouts);
+}
+function toggleCheckout(equipId) {
+  const eq = equipment.find(e => e.id === equipId); if(!eq) return;
+  if (checkouts[equipId]) {
+    // Check in
+    delete checkouts[equipId];
+    logChange('Edited', 'Equipment', eq.name, 'Checked in');
+  } else {
+    // Check out
+    checkouts[equipId] = { by: currentUser.name || currentUser.email, at: new Date().toISOString() };
+    logChange('Edited', 'Equipment', eq.name, 'Checked out by ' + (currentUser.name || currentUser.email));
+  }
+  saveCheckouts();
+  renderEquipTable();
+}
+
+
+// ── Lab Members Directory ──
+function renderMembers() {
+  const search = (document.getElementById('members-search')||{value:''}).value.toLowerCase();
+  const grid = document.getElementById('members-grid');
+  const empty = document.getElementById('members-empty');
+  if (!grid) return;
+  const filtered = regUsers.filter(u =>
+    !search ||
+    (u.name||'').toLowerCase().includes(search) ||
+    (u.email||'').toLowerCase().includes(search) ||
+    (u.role||'').toLowerCase().includes(search)
+  );
+  if (!filtered.length) { grid.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display='none';
+  grid.innerHTML = filtered.map(u => {
+    const initials = (u.name||u.email||'?').charAt(0).toUpperCase();
+    return `<div class="member-card">
+      <div class="member-avatar-lg">${initials}</div>
+      <div class="member-card-name">${esc(u.name||'—')}</div>
+      <div class="member-card-email">${esc(u.email)}</div>
+      ${u.role ? `<div class="member-card-role">${esc(u.role)}</div>` : ''}
+      ${u.notes ? `<div class="member-card-notes">${esc(u.notes)}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+
+// ── Notice Board ──
+let notices = JSON.parse(localStorage.getItem('dl_notices') || '[]');
+function saveNotices() { localStorage.setItem('dl_notices', JSON.stringify(notices)); if(window._db) fbSet('dl_notices', notices); }
+let editingNoticeId = null;
+function openNoticeModal(id) {
+  editingNoticeId = id;
+  ['notice-title-input','notice-body-input'].forEach(f => document.getElementById(f).value = '');
+  document.getElementById('notice-priority').value = 'normal';
+  document.getElementById('notice-modal-title').textContent = id ? 'Edit Announcement' : 'Post Announcement';
+  if (id) { const n = notices.find(x => x.id === id); if(n) { document.getElementById('notice-title-input').value=n.title||''; document.getElementById('notice-body-input').value=n.body||''; document.getElementById('notice-priority').value=n.priority||'normal'; } }
+  document.getElementById('notice-modal-overlay').classList.add('open');
+}
+function closeNoticeModal() { document.getElementById('notice-modal-overlay').classList.remove('open'); }
+function saveNotice() {
+  const title = document.getElementById('notice-title-input').value.trim();
+  const body = document.getElementById('notice-body-input').value.trim();
+  if (!title || !body) { alert('Please fill in title and message.'); return; }
+  const priority = document.getElementById('notice-priority').value;
+  if (editingNoticeId) {
+    const idx = notices.findIndex(n => n.id === editingNoticeId);
+    notices[idx] = { ...notices[idx], title, body, priority };
+  } else {
+    notices.unshift({ id: uid(), title, body, priority, by: currentUser.name||currentUser.email, ts: new Date().toISOString() });
+  }
+  saveNotices(); closeNoticeModal(); renderNoticeBoard();
+}
+function deleteNotice(id) {
+  customConfirm('Delete this announcement?', () => { notices = notices.filter(n => n.id !== id); saveNotices(); renderNoticeBoard(); });
+}
+function renderNoticeBoard() {
+  const list = document.getElementById('notice-list'); if(!list) return;
+  if (!notices.length) { list.innerHTML = '<div class="notice-empty">No announcements yet.</div>'; return; }
+  list.innerHTML = notices.map(n => `
+    <div class="notice-item ${n.priority||'normal'}">
+      <div class="notice-title">${esc(n.title)}</div>
+      <div class="notice-body">${esc(n.body)}</div>
+      <div class="notice-meta">Posted by ${esc(n.by||'Admin')} · ${fmtDate(n.ts)}</div>
+      ${isAdmin ? `<div class="notice-actions admin-only-btn">
+        <button class="btn-secondary" style="padding:3px 10px;font-size:12px;" onclick="openNoticeModal('${n.id}')">Edit</button>
+        <button class="btn-secondary" style="padding:3px 10px;font-size:12px;color:var(--danger);" onclick="deleteNotice('${n.id}')">Delete</button>
+      </div>` : ''}
+    </div>`).join('');
+}
+
+
+// ── Document Library ──
+let docLibrary = JSON.parse(localStorage.getItem('dl_documents') || '[]');
+function saveDocLibrary() { localStorage.setItem('dl_documents', JSON.stringify(docLibrary)); if(window._db) fbSet('dl_documents', docLibrary); }
+let editingDocId = null;
+const DOC_ICONS = { SOP:'📋', Safety:'⚠️', Protocol:'🔬', Onboarding:'🎓', Other:'📄' };
+function openDocModal(id) {
+  editingDocId = id;
+  ['doc-name-input','doc-desc-input','doc-link-input'].forEach(f => document.getElementById(f).value='');
+  document.getElementById('doc-cat-input').value = 'SOP';
+  document.getElementById('doc-modal-title').textContent = id ? 'Edit Document' : 'Add Document';
+  if (id) { const d = docLibrary.find(x => x.id===id); if(d){ document.getElementById('doc-name-input').value=d.name||''; document.getElementById('doc-desc-input').value=d.desc||''; document.getElementById('doc-link-input').value=d.link||''; document.getElementById('doc-cat-input').value=d.cat||'SOP'; } }
+  document.getElementById('doc-modal-overlay').classList.add('open');
+}
+function closeDocModal() { document.getElementById('doc-modal-overlay').classList.remove('open'); }
+function saveDoc() {
+  const name = document.getElementById('doc-name-input').value.trim();
+  if (!name) { alert('Please enter a document name.'); return; }
+  const obj = { name, cat: document.getElementById('doc-cat-input').value, desc: document.getElementById('doc-desc-input').value.trim(), link: document.getElementById('doc-link-input').value.trim(), addedBy: currentUser.name||currentUser.email, ts: new Date().toISOString() };
+  if (editingDocId) { const idx=docLibrary.findIndex(d=>d.id===editingDocId); docLibrary[idx]={...docLibrary[idx],...obj}; }
+  else { docLibrary.push({id:uid(),...obj}); }
+  saveDocLibrary(); closeDocModal(); renderDocLibrary();
+}
+function deleteDoc(id) {
+  customConfirm('Delete this document?', () => { docLibrary=docLibrary.filter(d=>d.id!==id); saveDocLibrary(); renderDocLibrary(); });
+}
+function renderDocLibrary() {
+  const search=(document.getElementById('doc-search')||{value:''}).value.toLowerCase();
+  const catF=(document.getElementById('doc-filter-cat')||{value:''}).value;
+  const grid=document.getElementById('doc-grid');
+  const empty=document.getElementById('doc-empty');
+  if(!grid) return;
+  const filtered=docLibrary.filter(d=>(!search||(d.name||'').toLowerCase().includes(search)||(d.desc||'').toLowerCase().includes(search))&&(!catF||d.cat===catF));
+  if(!filtered.length){grid.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+  grid.innerHTML=filtered.map(d=>`
+    <div class="doc-card">
+      <div class="doc-icon">${DOC_ICONS[d.cat]||'📄'}</div>
+      <div class="doc-info">
+        <div class="doc-name">${esc(d.name)}</div>
+        <div class="doc-cat">${esc(d.cat)}</div>
+        ${d.desc?`<div class="doc-desc">${esc(d.desc)}</div>`:''}
+        <div class="doc-meta">Added by ${esc(d.addedBy||'Admin')} · ${fmtDate(d.ts)}</div>
+        <div class="doc-actions">
+          ${d.link?`<a href="${esc(d.link)}" target="_blank" class="btn-secondary" style="padding:4px 10px;font-size:12px;text-decoration:none;">🔗 Open</a>`:''}
+          ${isAdmin?`<button class="btn-icon" onclick="openDocModal('${d.id}')" title="Edit">✏️</button><button class="btn-icon danger" onclick="deleteDoc('${d.id}')" title="Delete">🗑</button>`:''}
+        </div>
+      </div>
+    </div>`).join('');
+}
+
 // ── INIT ──
 // Pre-load spreadsheet data if localStorage is empty
 function _origInit() { (function() {
@@ -4197,6 +4529,8 @@ function _origInit() { (function() {
 })();
 renderEquipTable();
 renderProjects();
+renderExpiryDashboard();
+renderNoticeBoard();
 } // end _origInit
 
 // ── Start the app ──
@@ -4223,6 +4557,68 @@ if (window._firebaseReady) {
     <div class="confirm-btns">
       <button class="btn-secondary" id="confirm-cancel-btn">Cancel</button>
       <button class="btn-primary" id="confirm-ok-btn" style="width:auto;padding:8px 20px;background:var(--danger);border-color:var(--danger);">Delete</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- Notice Board Modal -->
+<div class="modal-overlay" id="notice-modal-overlay" onclick="if(event.target===this)closeNoticeModal()">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-header">
+      <h3 id="notice-modal-title">Post Announcement</h3>
+      <button class="btn-close" onclick="closeNoticeModal()">&#x2715;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-field full"><label>Title <span class="required">*</span></label>
+          <input type="text" id="notice-title-input" placeholder="e.g. Instron out of service"/></div>
+        <div class="form-field full"><label>Message <span class="required">*</span></label>
+          <textarea id="notice-body-input" placeholder="Details..." style="min-height:80px;"></textarea></div>
+        <div class="form-field"><label>Priority</label>
+          <select id="notice-priority">
+            <option value="normal">Normal</option>
+            <option value="urgent">Urgent</option>
+            <option value="info">Info / Good news</option>
+          </select></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeNoticeModal()">Cancel</button>
+      <button class="btn-primary" style="width:auto;padding:9px 24px;" onclick="saveNotice()">Post</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- Document Library Modal -->
+<div class="modal-overlay" id="doc-modal-overlay" onclick="if(event.target===this)closeDocModal()">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-header">
+      <h3 id="doc-modal-title">Add Document</h3>
+      <button class="btn-close" onclick="closeDocModal()">&#x2715;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-field full"><label>Document Name <span class="required">*</span></label>
+          <input type="text" id="doc-name-input" placeholder="e.g. Instron SOP v2"/></div>
+        <div class="form-field"><label>Category</label>
+          <select id="doc-cat-input">
+            <option value="SOP">SOP</option>
+            <option value="Safety">Safety</option>
+            <option value="Protocol">Protocol</option>
+            <option value="Onboarding">Onboarding</option>
+            <option value="Other">Other</option>
+          </select></div>
+        <div class="form-field full"><label>Description</label>
+          <textarea id="doc-desc-input" placeholder="Brief description..." style="min-height:60px;"></textarea></div>
+        <div class="form-field full"><label>Link (URL)</label>
+          <input type="url" id="doc-link-input" placeholder="https://..."/></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeDocModal()">Cancel</button>
+      <button class="btn-primary" style="width:auto;padding:9px 24px;" onclick="saveDoc()">Save</button>
     </div>
   </div>
 </div>
