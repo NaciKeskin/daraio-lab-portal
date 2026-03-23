@@ -1069,6 +1069,50 @@
   .sample-archived { background:var(--border);color:var(--muted); }
   .sample-disposed { background:#fdecea;color:var(--danger); }
 
+
+  /* Instrument Issues Tracker */
+  .issue-entry {
+    background: var(--bg); border: 1.5px solid var(--border);
+    border-radius: 10px; padding: 12px 14px; margin-bottom: 10px;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .issue-entry:hover { border-color: var(--accent-light); box-shadow: var(--shadow); }
+  .issue-entry.priority-critical { border-left: 3px solid var(--danger); }
+  .issue-entry.priority-high     { border-left: 3px solid var(--warning); }
+  .issue-entry.priority-medium   { border-left: 3px solid #3b82f6; }
+  .issue-entry.priority-low      { border-left: 3px solid var(--border); }
+  .issue-entry-top { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; margin-bottom:6px; }
+  .issue-title { font-size:13px; font-weight:600; flex:1; }
+  .issue-badges { display:flex; gap:5px; flex-wrap:wrap; flex-shrink:0; }
+  .issue-badge {
+    font-size:10px; font-weight:700; padding:2px 8px; border-radius:10px;
+    text-transform:uppercase; letter-spacing:0.03em;
+  }
+  .issue-badge.critical  { background:#fdecea; color:var(--danger); }
+  .issue-badge.high      { background:var(--warning-light); color:var(--warning); }
+  .issue-badge.medium    { background:#eff6ff; color:#3b82f6; }
+  .issue-badge.low       { background:var(--bg); color:var(--muted); border:1px solid var(--border); }
+  .issue-badge.open      { background:#fdecea; color:var(--danger); }
+  .issue-badge.in-progress { background:var(--warning-light); color:var(--warning); }
+  .issue-badge.awaiting-parts { background:#eff6ff; color:#3b82f6; }
+  .issue-badge.resolved  { background:var(--success-light); color:var(--success); }
+  .issue-meta { font-size:11px; color:var(--muted); margin-bottom:5px; }
+  .issue-notes { font-size:12px; color:var(--muted); line-height:1.5; margin-top:5px; }
+  .issue-actions { display:flex; gap:5px; margin-top:8px; }
+  .issue-resolve-btn {
+    padding:3px 10px; border-radius:6px; font-size:11px; font-weight:600;
+    border:1px solid var(--success); color:var(--success); background:var(--success-light);
+    cursor:pointer; font-family:inherit; transition:opacity 0.15s;
+  }
+  .issue-resolve-btn:hover { opacity:0.8; }
+  /* Issues count badge on instrument list */
+  .issues-badge {
+    background:var(--danger); color:#fff;
+    font-size:10px; font-weight:700;
+    padding:2px 7px; border-radius:10px;
+  }
+  .issues-badge.warn { background:var(--warning); }
+
 </style>
   <!-- Firebase SDK -->
   <script type="module">
@@ -1204,6 +1248,10 @@
       <div class="expiry-alert-list" id="expiry-alert-list">
         <div class="expiry-empty">Loading...</div>
       </div>
+    </div>
+    <div class="expiry-dashboard" id="issues-dashboard" style="display:none;">
+      <div class="expiry-dashboard-title">🔧 Open Instrument Issues <span id="issues-dashboard-badge" style="background:var(--danger);color:#fff;font-size:11px;padding:2px 8px;border-radius:10px;font-weight:600;"></span></div>
+      <div class="expiry-alert-list" id="issues-dashboard-list"></div>
     </div>
     <div class="expiry-dashboard" id="low-stock-dashboard" style="display:none;">
       <div class="expiry-dashboard-title">⚠️ Low Stock Alerts <span id="low-stock-badge" style="background:var(--warning);color:#fff;font-size:11px;padding:2px 8px;border-radius:10px;font-weight:600;"></span></div>
@@ -2513,7 +2561,7 @@ function attemptAccess() {
 function switchTab(tab) {
   document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  if(tab==='home') { setTimeout(renderExpiryDashboard, 50); setTimeout(renderNoticeBoard, 50); setTimeout(renderLowStockDashboard, 50); }
+  if(tab==='home') { setTimeout(renderExpiryDashboard, 50); setTimeout(renderNoticeBoard, 50); setTimeout(renderLowStockDashboard, 50); setTimeout(renderIssuesDashboard, 50); }
   const tabEl=document.getElementById('tab-'+tab);
   if(tabEl) tabEl.classList.add('active');
   const pageEl=document.getElementById('page-'+tab);
@@ -3212,6 +3260,7 @@ function renderInstList() {
         ${inst.company?`<span>&middot; ${esc(inst.company)}</span>`:''}
         ${alert==='overdue'?'<span class="inst-alert-flag red">&#x26A0; Overdue</span>':alert==='soon'?'<span class="inst-alert-flag">&#x26A0; Due Soon</span>':''}
         ${sessionCount>0?`<span style="background:var(--success);color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;">● ${sessionCount} active</span>`:''}
+        ${(()=>{const open=instOpenIssueCount(inst.id);const crit=instCriticalIssueCount(inst.id);return open>0?`<span class="issues-badge${crit>0?'':' warn'}">${crit>0?'🔴':'🟠'} ${open} issue${open>1?'s':''}</span>`:''})()}
       </div>
     </div>`;
   }).join('') + '';
@@ -3269,6 +3318,7 @@ function renderInstSidebar(inst) {
   ${renderInstSessionPanel(inst.id)}
   <div class="inst-sidebar-tabs">
     <button class="inst-sidebar-tab${activeInstSidebarTab==='details'?' active':''}" onclick="setInstSidebarTab('details','${inst.id}')">Details</button>
+    <button class="inst-sidebar-tab${activeInstSidebarTab==='issues'?' active':''}" onclick="setInstSidebarTab('issues','${inst.id}')" style="${(()=>{const open=(instIssues[inst.id]||[]).filter(x=>x.status!=='Resolved').length;return open>0?'color:var(--danger);font-weight:700;':''})()}">⚠ Issues ${(()=>{const open=(instIssues[inst.id]||[]).filter(x=>x.status!=='Resolved').length;return open>0?'('+open+')':'';})()}</button>
     <button class="inst-sidebar-tab${activeInstSidebarTab==='sop'?' active':''}" onclick="setInstSidebarTab('sop','${inst.id}')">SOPs (${(inst.sops||[]).length})</button>
     <button class="inst-sidebar-tab${activeInstSidebarTab==='attachments'?' active':''}" onclick="setInstSidebarTab('attachments','${inst.id}')">Attachments (${(inst.attachments||[]).length})</button>
     <button class="inst-sidebar-tab${activeInstSidebarTab==='training'?' active':''}" onclick="setInstSidebarTab('training','${inst.id}')">Training (${(inst.training||[]).length})</button>
@@ -3310,6 +3360,10 @@ function renderInstSidebar(inst) {
   <div id="inst-panel-training" class="inst-sidebar-panel${activeInstSidebarTab==='training'?' active':''}">
     <div class="training-list">${renderTrainingList(inst)}</div>
     <button class="panel-add-btn" onclick="openTrainingModal('${inst.id}')">&#xFF0B; Add Training Record</button>
+  </div>
+  <div id="inst-panel-issues" class="inst-sidebar-panel${activeInstSidebarTab==='issues'?' active':''}">
+    <div id="inst-issues-list-${inst.id}">${renderIssuesList(inst.id)}</div>
+    <button class="panel-add-btn" onclick="openIssueModal('${inst.id}',null)">&#xFF0B; Report Issue</button>
   </div>`;
 }
 
@@ -4486,6 +4540,7 @@ async function loadAllFromFirebase() {
     { key: 'dl_documents',   varSetter: v => { docLibrary = v; } },
     { key: 'dl_checkouts',   varSetter: v => { checkouts = v; } },
     { key: 'dl_sessions',    varSetter: v => { if(v && typeof v === 'object' && !Array.isArray(v)) activeSessions = v; } },
+    { key: 'dl_inst_issues', varSetter: v => { if(v && typeof v === 'object' && !Array.isArray(v)) instIssues = v; } },
     { key: 'dl_samples',     varSetter: v => { samples = v; } },
   ];
 
@@ -5175,6 +5230,242 @@ function renderLowStockDashboard() {
     </div>`).join('');
 }
 
+
+// ══════════════════════════════════════════════════
+// INSTRUMENT ISSUES TRACKER
+// ══════════════════════════════════════════════════
+
+// instIssues: { instrumentId: [ { id, title, priority, status, type, part, notes, reportedBy, reportedDate, resolvedDate } ] }
+let instIssues = {};
+function saveInstIssues() {
+  localStorage.setItem('dl_inst_issues', JSON.stringify(instIssues));
+  if (window._db) fbSet('dl_inst_issues', instIssues);
+}
+
+let _issueInstId = null;
+let _editingIssueId = null;
+
+const ISSUE_PRIORITY_ORDER = { Critical: 0, High: 1, Medium: 2, Low: 3 };
+const ISSUE_PRIORITY_LABEL = { Critical: '🔴 Critical', High: '🟠 High', Medium: '🔵 Medium', Low: '⚪ Low' };
+const ISSUE_STATUS_LABEL   = { Open: 'Open', 'In Progress': 'In Progress', 'Awaiting Parts': 'Awaiting Parts', Resolved: '✅ Resolved' };
+
+// Pending issue attachments buffer
+let _pendingIssueFiles = []; // [{ name, dataUrl, type }]
+
+function openIssueModal(instId, issueId) {
+  _issueInstId = instId;
+  _editingIssueId = issueId;
+  _pendingIssueFiles = [];
+  ['iss-title','iss-part','iss-notes'].forEach(f => document.getElementById(f).value = '');
+  document.getElementById('iss-priority').value = 'Medium';
+  document.getElementById('iss-status').value   = 'Open';
+  document.getElementById('iss-type').value     = 'Part Replacement';
+  document.getElementById('issue-modal-title').textContent = issueId ? 'Edit Issue' : 'Report Issue';
+  if (issueId) {
+    const issue = (instIssues[instId]||[]).find(x => x.id === issueId);
+    if (issue) {
+      document.getElementById('iss-title').value    = issue.title||'';
+      document.getElementById('iss-priority').value = issue.priority||'Medium';
+      document.getElementById('iss-status').value   = issue.status||'Open';
+      document.getElementById('iss-type').value     = issue.type||'Part Replacement';
+      document.getElementById('iss-part').value     = issue.part||'';
+      document.getElementById('iss-notes').value    = issue.notes||'';
+      // Load existing attachments into buffer
+      _pendingIssueFiles = (issue.attachments||[]).map(a => ({...a}));
+    }
+  }
+  renderIssueFileList();
+  document.getElementById('issue-modal-overlay').classList.add('open');
+}
+
+function handleIssueFileSelect(e) {
+  Array.from(e.target.files).forEach(file => readIssueFile(file));
+  e.target.value = ''; // reset so same file can be re-added
+}
+function handleIssueFileDrop(e) {
+  e.preventDefault();
+  document.getElementById('iss-file-drop-area').style.borderColor = 'var(--border)';
+  Array.from(e.dataTransfer.files).forEach(file => readIssueFile(file));
+}
+function readIssueFile(file) {
+  // 10MB cap
+  if (file.size > 10 * 1024 * 1024) { alert(file.name + ' is too large (max 10MB).'); return; }
+  const reader = new FileReader();
+  reader.onload = ev => {
+    _pendingIssueFiles.push({ id: uid(), name: file.name, dataUrl: ev.target.result, type: file.type, size: file.size });
+    renderIssueFileList();
+  };
+  reader.readAsDataURL(file);
+}
+function removeIssueFile(id) {
+  _pendingIssueFiles = _pendingIssueFiles.filter(f => f.id !== id);
+  renderIssueFileList();
+}
+function renderIssueFileList() {
+  const list = document.getElementById('iss-file-list');
+  if (!list) return;
+  if (!_pendingIssueFiles.length) { list.innerHTML = ''; return; }
+  list.innerHTML = _pendingIssueFiles.map(f => {
+    const isImg = f.type && f.type.startsWith('image/');
+    const sizeKb = f.size ? Math.round(f.size/1024) + ' KB' : '';
+    return `<div style="display:flex;align-items:center;gap:8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:12px;">
+      <span style="font-size:16px;">${isImg ? '🖼️' : '📄'}</span>
+      <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(f.name)}">${esc(f.name)}</span>
+      <span style="color:var(--muted);flex-shrink:0;">${sizeKb}</span>
+      <button onclick="removeIssueFile('${f.id}')" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:16px;line-height:1;padding:0 2px;" title="Remove">×</button>
+    </div>`;
+  }).join('');
+}
+function closeIssueModal() { document.getElementById('issue-modal-overlay').classList.remove('open'); }
+
+function saveIssue() {
+  const title = document.getElementById('iss-title').value.trim();
+  if (!title) { alert('Please enter an issue title.'); return; }
+  const status = document.getElementById('iss-status').value;
+  const now = new Date().toISOString();
+  const obj = {
+    title,
+    priority:    document.getElementById('iss-priority').value,
+    status,
+    type:        document.getElementById('iss-type').value,
+    part:        document.getElementById('iss-part').value.trim(),
+    notes:       document.getElementById('iss-notes').value.trim(),
+    attachments: _pendingIssueFiles.slice(),
+    lastEditedBy:  currentUser.name||currentUser.email,
+    lastEditedDate: now,
+  };
+  const instName = instruments.find(i => i.id === _issueInstId)?.name || _issueInstId;
+  if (!instIssues[_issueInstId]) instIssues[_issueInstId] = [];
+  if (_editingIssueId) {
+    const idx = instIssues[_issueInstId].findIndex(x => x.id === _editingIssueId);
+    const prev = instIssues[_issueInstId][idx];
+    // Set resolvedDate if just resolved
+    const resolvedDate = (status === 'Resolved' && prev.status !== 'Resolved') ? now : (prev.resolvedDate||null);
+    instIssues[_issueInstId][idx] = { ...prev, ...obj, resolvedDate };
+    logChange('Edited', 'Instruments', instName, 'Issue updated: ' + title);
+  } else {
+    instIssues[_issueInstId].push({ id: uid(), reportedBy: currentUser.name||currentUser.email, reportedDate: now, resolvedDate: null, ...obj });
+    logChange('Edited', 'Instruments', instName, 'Issue reported: ' + title + ' [' + obj.priority + ']');
+  }
+  saveInstIssues();
+  closeIssueModal();
+  renderInstList();
+  if (activeInstId) selectInstrument(activeInstId);
+  renderIssuesDashboard();
+}
+
+function resolveIssue(instId, issueId) {
+  const issues = instIssues[instId]||[];
+  const idx = issues.findIndex(x => x.id === issueId);
+  if (idx < 0) return;
+  instIssues[instId][idx].status = 'Resolved';
+  instIssues[instId][idx].resolvedDate = new Date().toISOString();
+  const instName = instruments.find(i => i.id === instId)?.name || instId;
+  logChange('Edited', 'Instruments', instName, 'Issue resolved: ' + instIssues[instId][idx].title);
+  saveInstIssues();
+  renderInstList();
+  if (activeInstId) selectInstrument(activeInstId);
+  renderIssuesDashboard();
+}
+
+function deleteIssue(instId, issueId) {
+  customConfirm('Delete this issue record?', () => {
+    instIssues[instId] = (instIssues[instId]||[]).filter(x => x.id !== issueId);
+    saveInstIssues();
+    renderInstList();
+    if (activeInstId) selectInstrument(activeInstId);
+    renderIssuesDashboard();
+  });
+}
+
+function renderIssuesList(instId) {
+  const issues = (instIssues[instId]||[]).slice().sort((a,b) =>
+    (ISSUE_PRIORITY_ORDER[a.priority]??3) - (ISSUE_PRIORITY_ORDER[b.priority]??3)
+  );
+  if (!issues.length) return '<p style="font-size:13px;color:var(--muted);padding:8px 0;">No issues reported. Use the button below to log a problem.</p>';
+  const open = issues.filter(x => x.status !== 'Resolved');
+  const resolved = issues.filter(x => x.status === 'Resolved');
+  const renderIssue = (issue) => `
+    <div class="issue-entry priority-${issue.priority.toLowerCase()}">
+      <div class="issue-entry-top">
+        <div class="issue-title">${esc(issue.title)}</div>
+        <div class="issue-badges">
+          <span class="issue-badge ${issue.priority.toLowerCase()}">${issue.priority}</span>
+          <span class="issue-badge ${issue.status.toLowerCase().replace(/\s+/g,'-')}">${ISSUE_STATUS_LABEL[issue.status]||issue.status}</span>
+        </div>
+      </div>
+      <div class="issue-meta">
+        ${esc(issue.type)}${issue.part ? ' · <strong>' + esc(issue.part) + '</strong>' : ''}
+        · Reported by ${esc(issue.reportedBy)} on ${fmtDate(issue.reportedDate)}
+        ${issue.resolvedDate ? ' · Resolved ' + fmtDate(issue.resolvedDate) : ''}
+      </div>
+      ${issue.notes ? `<div class="issue-notes">${esc(issue.notes)}</div>` : ''}
+      ${(issue.attachments||[]).length > 0 ? `
+        <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:5px;">
+          ${(issue.attachments||[]).map(a => {
+            const isImg = a.type && a.type.startsWith('image/');
+            return isImg
+              ? `<a href="${a.dataUrl}" download="${esc(a.name)}" title="${esc(a.name)}" style="display:inline-block;">
+                  <img src="${a.dataUrl}" style="width:48px;height:48px;object-fit:cover;border-radius:6px;border:1px solid var(--border);cursor:pointer;" title="${esc(a.name)}"/>
+                </a>`
+              : `<a href="${a.dataUrl}" download="${esc(a.name)}"
+                  style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;font-size:11px;color:var(--text);text-decoration:none;"
+                  title="Download ${esc(a.name)}">📄 ${esc(a.name)}</a>`;
+          }).join('')}
+        </div>` : ''}
+      <div class="issue-actions">
+        ${issue.status !== 'Resolved' ? `<button class="issue-resolve-btn" onclick="resolveIssue('${instId}','${issue.id}')">✓ Mark Resolved</button>` : ''}
+        <button class="btn-icon" onclick="openIssueModal('${instId}','${issue.id}')" title="Edit">✏️</button>
+        <button class="btn-icon danger" onclick="deleteIssue('${instId}','${issue.id}')" title="Delete">🗑</button>
+      </div>
+    </div>`;
+
+  let html = '';
+  if (open.length) html += open.map(renderIssue).join('');
+  if (resolved.length) {
+    html += `<div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:14px 0 8px;padding-top:8px;border-top:1px solid var(--border);">Resolved (${resolved.length})</div>`;
+    html += resolved.map(renderIssue).join('');
+  }
+  return html;
+}
+
+// ── Issues count badge on instrument list ──
+// (called inside renderInstList via instOpenIssueCount)
+function instOpenIssueCount(instId) {
+  return (instIssues[instId]||[]).filter(x => x.status !== 'Resolved').length;
+}
+function instCriticalIssueCount(instId) {
+  return (instIssues[instId]||[]).filter(x => x.status !== 'Resolved' && x.priority === 'Critical').length;
+}
+
+// ── Home page Issues Dashboard ──
+function renderIssuesDashboard() {
+  const list  = document.getElementById('issues-dashboard-list');
+  const badge = document.getElementById('issues-dashboard-badge');
+  const panel = document.getElementById('issues-dashboard');
+  if (!list) return;
+  const allOpen = [];
+  instruments.forEach(inst => {
+    (instIssues[inst.id]||[]).filter(x => x.status !== 'Resolved').forEach(issue => {
+      allOpen.push({ ...issue, instName: inst.name, instId: inst.id });
+    });
+  });
+  allOpen.sort((a,b) => (ISSUE_PRIORITY_ORDER[a.priority]??3) - (ISSUE_PRIORITY_ORDER[b.priority]??3));
+  if (!allOpen.length) { if(panel) panel.style.display='none'; return; }
+  if(panel) panel.style.display='block';
+  if(badge) badge.textContent = allOpen.length + ' open';
+  list.innerHTML = allOpen.map(issue => `
+    <div class="expiry-alert-item ${issue.priority==='Critical'||issue.priority==='High'?'expired':'expiring'}"
+      onclick="switchTab('instruments');setTimeout(()=>selectInstrument('${issue.instId}'),150);setTimeout(()=>{activeInstSidebarTab='issues';selectInstrument('${issue.instId}');},300);"
+      title="Go to instrument">
+      <span class="expiry-alert-name">
+        <strong>${esc(issue.instName)}</strong> — ${esc(issue.title)}
+        ${issue.part?'<span style="opacity:.7;"> ('+esc(issue.part)+')</span>':''}
+      </span>
+      <span class="expiry-alert-date">${issue.priority} · ${issue.type}</span>
+    </div>`).join('');
+}
+
 // ── INIT ──
 // Pre-load spreadsheet data if localStorage is empty
 function _origInit() { (function() {
@@ -5196,6 +5487,7 @@ renderProjects();
 renderExpiryDashboard();
 renderNoticeBoard();
 renderLowStockDashboard();
+renderIssuesDashboard();
 } // end _origInit
 
 // ── Start the app ──
@@ -5379,6 +5671,66 @@ if (window._firebaseReady) {
     <div class="modal-footer">
       <button class="btn-secondary" onclick="closeSampleModal()">Cancel</button>
       <button class="btn-primary" style="width:auto;padding:9px 24px;" onclick="saveSample()">Save Sample</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- Issue Modal -->
+<div class="modal-overlay" id="issue-modal-overlay" onclick="if(event.target===this)closeIssueModal()">
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-header">
+      <h3 id="issue-modal-title">Report Issue</h3>
+      <button class="btn-close" onclick="closeIssueModal()">&#x2715;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-field full"><label>Issue Title <span class="required">*</span></label>
+          <input type="text" id="iss-title" placeholder="e.g. Load cell needs recalibration"/></div>
+        <div class="form-field"><label>Priority <span class="required">*</span></label>
+          <select id="iss-priority">
+            <option value="Low">Low</option>
+            <option value="Medium" selected>Medium</option>
+            <option value="High">High</option>
+            <option value="Critical">Critical</option>
+          </select></div>
+        <div class="form-field"><label>Status</label>
+          <select id="iss-status">
+            <option value="Open" selected>Open</option>
+            <option value="In Progress">In Progress</option>
+            <option value="Awaiting Parts">Awaiting Parts</option>
+            <option value="Resolved">Resolved</option>
+          </select></div>
+        <div class="form-field full"><label>Type</label>
+          <select id="iss-type">
+            <option value="Part Replacement">Part Replacement</option>
+            <option value="Repair">Repair</option>
+            <option value="Calibration Needed">Calibration Needed</option>
+            <option value="Inspection Required">Inspection Required</option>
+            <option value="Software / Firmware">Software / Firmware</option>
+            <option value="Other">Other</option>
+          </select></div>
+        <div class="form-field full"><label>Part / Component <span style="color:var(--muted);font-weight:400;">(optional)</span></label>
+          <input type="text" id="iss-part" placeholder="e.g. 250N load cell, cooling pump, lens"/></div>
+        <div class="form-field full"><label>Notes</label>
+          <textarea id="iss-notes" placeholder="Symptoms, part numbers, vendor info, steps to reproduce..." style="min-height:80px;"></textarea></div>
+        <div class="form-field full">
+          <label>Attachments <span style="color:var(--muted);font-weight:400;">(photos, PDFs, error logs)</span></label>
+          <div id="iss-file-drop-area" style="border:2px dashed var(--border);border-radius:8px;padding:16px;text-align:center;cursor:pointer;transition:border-color 0.15s;font-size:13px;color:var(--muted);"
+            onclick="document.getElementById('iss-file-input').click()"
+            ondragover="event.preventDefault();this.style.borderColor='var(--accent)'"
+            ondragleave="this.style.borderColor='var(--border)'"
+            ondrop="handleIssueFileDrop(event)">
+            📎 Click to attach files or drag &amp; drop
+          </div>
+          <input type="file" id="iss-file-input" multiple accept="image/*,.pdf,.txt,.csv,.xlsx,.docx" style="display:none;" onchange="handleIssueFileSelect(event)"/>
+          <div id="iss-file-list" style="margin-top:8px;display:flex;flex-direction:column;gap:4px;"></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeIssueModal()">Cancel</button>
+      <button class="btn-primary" style="width:auto;padding:9px 24px;" onclick="saveIssue()">Save Issue</button>
     </div>
   </div>
 </div>
