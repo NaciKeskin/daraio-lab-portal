@@ -1050,6 +1050,25 @@
   .badge-scan-sub { font-size: 14px; color: var(--muted); margin-bottom: 24px; line-height: 1.5; }
   .badge-input-hidden { position: absolute; opacity: 0; pointer-events: none; }
 
+
+  /* Sample tracking */
+  .sample-card {
+    background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+    padding:16px;box-shadow:var(--shadow);transition:box-shadow 0.15s,border-color 0.15s;
+  }
+  .sample-card:hover { box-shadow:var(--shadow-lg); }
+  .sample-id { font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);margin-bottom:4px; }
+  .sample-name { font-size:14px;font-weight:600;margin-bottom:6px; }
+  .sample-meta-row { display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;font-size:12px;color:var(--muted); }
+  .sample-meta-item { display:flex;align-items:center;gap:4px; }
+  .sample-status-badge {
+    display:inline-flex;align-items:center;gap:4px;
+    padding:3px 10px;border-radius:10px;font-size:11px;font-weight:600;
+  }
+  .sample-active { background:var(--success-light);color:var(--success); }
+  .sample-archived { background:var(--border);color:var(--muted); }
+  .sample-disposed { background:#fdecea;color:var(--danger); }
+
 </style>
   <!-- Firebase SDK -->
   <script type="module">
@@ -1145,6 +1164,7 @@
       <button class="nav-tab" onclick="switchTab('instruments')" id="tab-instruments">🔬 <span>Instruments</span></button>
       <button class="nav-tab" onclick="switchTab('highvalue')" id="tab-highvalue">💎 <span>High-Value Items</span></button>
       <button class="nav-tab" onclick="switchTab('members')" id="tab-members">👥 <span>Lab Members</span></button>
+      <button class="nav-tab" onclick="switchTab('samples')" id="tab-samples">🧬 <span>Samples</span></button>
       <button class="nav-tab" onclick="switchTab('documents')" id="tab-documents">📚 <span>Documents</span></button>
       <button class="nav-tab admin-only-tab" onclick="switchTab('admin')" id="tab-admin" style="display:none;">🔐 <span>Admin</span></button>
     </nav>
@@ -1185,6 +1205,10 @@
         <div class="expiry-empty">Loading...</div>
       </div>
     </div>
+    <div class="expiry-dashboard" id="low-stock-dashboard" style="display:none;">
+      <div class="expiry-dashboard-title">⚠️ Low Stock Alerts <span id="low-stock-badge" style="background:var(--warning);color:#fff;font-size:11px;padding:2px 8px;border-radius:10px;font-weight:600;"></span></div>
+      <div class="expiry-alert-list" id="low-stock-list"></div>
+    </div>
     <p class="home-sections-title">Portal Sections</p>
     <div class="home-cards">
       <div class="home-card" onclick="switchTab('equipment')">
@@ -1210,6 +1234,12 @@
         <h3>Instruments</h3>
         <p>A dedicated section for high-value instruments requiring formal training. Includes user manuals, training requirements, and booking information.</p>
         <span class="card-status live">&#x25CF; Active</span>
+      </div>
+      <div class="home-card" onclick="switchTab('samples')">
+        <div class="home-card-icon">🧬</div>
+        <h3>Sample Tracking</h3>
+        <p>Log physical samples with storage location, owner, project, and retention date.</p>
+        <span class="card-status live">● Active</span>
       </div>
       <div class="home-card" onclick="switchTab('documents')">
         <div class="home-card-icon">📚</div>
@@ -1846,6 +1876,40 @@
 
 
 
+
+  <!-- SAMPLE TRACKING -->
+  <div class="page" id="page-samples">
+    <div class="page-header">
+      <div><h2>🧬 Sample Tracking</h2><p>Log and track physical samples — storage, retention, and status.</p></div>
+      <button class="btn-add" onclick="openSampleModal(null)">＋ Add Sample</button>
+    </div>
+    <div class="stats-row">
+      <div class="stat-chip total"><span class="dot"></span> <span id="sample-stat-total">0</span> Total</div>
+      <div class="stat-chip available"><span class="dot"></span> <span id="sample-stat-active">0</span> Active</div>
+      <div class="stat-chip maintenance"><span class="dot"></span> <span id="sample-stat-archived">0</span> Archived</div>
+    </div>
+    <div class="toolbar" style="margin-bottom:20px;">
+      <div class="search-box"><span class="search-icon">🔍</span>
+        <input type="text" id="sample-search" placeholder="Search by name, owner, project..." oninput="renderSamples()"/>
+      </div>
+      <select class="filter-select" id="sample-filter-status" onchange="renderSamples()">
+        <option value="">All Statuses</option>
+        <option value="Active">Active</option>
+        <option value="Archived">Archived</option>
+        <option value="Disposed">Disposed</option>
+      </select>
+      <select class="filter-select" id="sample-filter-owner" onchange="renderSamples()">
+        <option value="">All Owners</option>
+      </select>
+    </div>
+    <div id="sample-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;"></div>
+    <div id="sample-empty" class="empty-state" style="display:none;">
+      <div class="empty-icon">🧬</div><h3>No samples yet</h3>
+      <p>Track physical samples with storage location, owner, and retention dates.</p>
+      <button class="btn-add" onclick="openSampleModal(null)" style="margin-top:12px;">＋ Add First Sample</button>
+    </div>
+  </div>
+
   <!-- DOCUMENT LIBRARY -->
   <div class="page" id="page-documents">
     <div class="page-header">
@@ -2180,6 +2244,10 @@
           <input type="number" id="ef-qty" min="1" value="1"/>
         </div>
         <div class="form-field">
+          <label>Low Stock Alert <span style="color:var(--muted);font-weight:400;">(min qty)</span></label>
+          <input type="number" id="ef-minqty" min="0" placeholder="e.g. 2" title="Alert when qty falls at or below this number"/>
+        </div>
+        <div class="form-field">
           <label>Status <span class="required">*</span></label>
           <select id="ef-status">
             <option value="Available">Available</option>
@@ -2276,6 +2344,28 @@
         <div class="form-field">
           <label>Expiration Date <span style="color:var(--muted);font-weight:400;">(if applicable)</span></label>
           <input type="date" id="cf-expiry"/>
+        </div>
+        <div class="form-field">
+          <label>Current Amount</label>
+          <div style="display:flex;gap:8px;">
+            <input type="number" id="cf-amount" min="0" step="any" placeholder="e.g. 250" style="flex:1;"/>
+            <select id="cf-amount-unit" style="width:90px;" onchange="document.getElementById('cf-minamount-unit-display').textContent=this.value;">
+              <option value="ml">ml</option>
+              <option value="L">L</option>
+              <option value="g">g</option>
+              <option value="kg">kg</option>
+              <option value="mg">mg</option>
+              <option value="µl">µl</option>
+              <option value="ea">ea</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-field">
+          <label>Low Stock Alert <span style="color:var(--muted);font-weight:400;">(min amount)</span></label>
+          <div style="display:flex;gap:8px;">
+            <input type="number" id="cf-minamount" min="0" step="any" placeholder="e.g. 50" style="flex:1;" title="Alert when amount falls at or below this"/>
+            <div style="width:90px;padding:8px 10px;background:var(--bg);border:1.5px solid var(--border);border-radius:8px;font-size:13px;color:var(--muted);display:flex;align-items:center;" id="cf-minamount-unit-display">—</div>
+          </div>
         </div>
         <div class="form-field full">
           <label>Details / Notes</label>
@@ -2421,7 +2511,7 @@ function attemptAccess() {
 function switchTab(tab) {
   document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  if(tab==='home') { setTimeout(renderExpiryDashboard, 50); setTimeout(renderNoticeBoard, 50); }
+  if(tab==='home') { setTimeout(renderExpiryDashboard, 50); setTimeout(renderNoticeBoard, 50); setTimeout(renderLowStockDashboard, 50); }
   const tabEl=document.getElementById('tab-'+tab);
   if(tabEl) tabEl.classList.add('active');
   const pageEl=document.getElementById('page-'+tab);
@@ -2433,6 +2523,7 @@ function switchTab(tab) {
   if(tab==='highvalue') { if(typeof renderHVTable==='function') renderHVTable(); }
   if(tab==='members') { if(typeof renderMembers==='function') renderMembers(); }
   if(tab==='documents') { if(typeof renderDocLibrary==='function') renderDocLibrary(); }
+  if(tab==='samples') { if(typeof renderSamples==='function') renderSamples(); }
   if(tab==='admin') { if(typeof renderRegUsers==='function'){renderRegUsers();renderHistory();renderQRGrid();loadSettingsUI();} }
 }
 
@@ -2472,7 +2563,7 @@ function renderEquipTable() {
       <td>${esc(e.company||'—')}</td>
       <td>${e.serial?`<span style="font-family:'DM Mono',monospace;font-size:12px;">${esc(e.serial)}</span>`:'<span style="color:var(--muted)">—</span>'}</td>
       <td>${e.category?`<span class="category-tag">${esc(e.category)}</span>`:'—'}</td>
-      <td><span class="qty-badge">${e.qty}</span></td>
+      <td><span class="qty-badge">${e.qty}</span>${e.minQty>0&&e.qty<=e.minQty?'<div style="font-size:10px;color:var(--danger);font-weight:600;margin-top:2px;">⚠ Low Stock</div>':''}</td>
       <td><span class="status-badge ${getStatusClass(e.status)}"><span class="dot"></span>${esc(e.status)}</span></td>
       <td>${(()=>{const co=checkouts[e.id];if(co)return '<span class="checkout-badge checked-out">📤 '+esc(co.by)+'</span><br><button class="btn-checkout checkin" onclick="toggleCheckout(\'' +e.id+ '\')">Check In</button>';return '<button class="btn-checkout" onclick="toggleCheckout(\'' +e.id+ '\')">Check Out</button>';})()}</td>
       <td><div>${esc(e.location||'—')}</div>${e.locationDetail?`<div class="meta-text">${esc(e.locationDetail)}</div>`:''}</td>
@@ -2490,6 +2581,7 @@ function openAddEquipModal(){
   document.getElementById('equip-modal-title').textContent='Add Equipment';
   ['ef-name','ef-company','ef-model','ef-serial','ef-category','ef-location','ef-location-detail','ef-details'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('ef-qty').value=1;
+  document.getElementById('ef-minqty').value='';
   document.getElementById('ef-status').value='Available';
   document.getElementById('equip-modal-overlay').classList.add('open');
 }
@@ -2503,6 +2595,7 @@ function openEditEquipModal(id){
   document.getElementById('ef-serial').value=item.serial||'';
   document.getElementById('ef-category').value=item.category||'';
   document.getElementById('ef-qty').value=item.qty||1;
+  document.getElementById('ef-minqty').value=item.minQty||'';
   document.getElementById('ef-status').value=item.status||'Available';
   document.getElementById('ef-location').value=item.location||'';
   document.getElementById('ef-location-detail').value=item.locationDetail||'';
@@ -2524,6 +2617,7 @@ function saveEquipment(){
     serial:document.getElementById('ef-serial').value.trim(),
     category,
     qty:parseInt(document.getElementById('ef-qty').value)||1,
+    minQty:parseInt(document.getElementById('ef-minqty').value)||0,
     status:document.getElementById('ef-status').value,
     location:document.getElementById('ef-location').value.trim(),
     locationDetail:document.getElementById('ef-location-detail').value.trim(),
@@ -2624,7 +2718,10 @@ function renderChemTable(){
     else if(c.safetyType==='pdf'&&c.safetyFile) safetyHtml=`<a href="${c.safetyFile.dataUrl}" download="${esc(c.safetyFile.name)}" class="safety-link">📄 Download PDF</a>`;
     else if(c.name) { const q=encodeURIComponent(c.name); safetyHtml=`<a href="https://pubchem.ncbi.nlm.nih.gov/compound/${q}" target="_blank" class="safety-link" style="color:var(--muted);font-size:11px;" title="Search PubChem">🔍 PubChem</a>`; }
     return `<tr>
-      <td><div class="equip-name">${esc(c.name)}</div></td>
+      <td>
+        <div class="equip-name">${esc(c.name)}</div>
+        ${c.amount>0?`<div style="font-size:11px;color:var(--muted);margin-top:2px;">${c.amount} ${esc(c.amountUnit||'')}${c.minAmount>0&&c.amount<=c.minAmount?'<span style="color:var(--danger);font-weight:600;margin-left:6px;">⚠ Low Stock</span>':''}</div>`:''}
+      </td>
       <td>${c.formula?`<span style="font-family:'DM Mono',monospace;font-size:13px;">${esc(c.formula)}</span>`:'—'}</td>
       <td>${c.type?`<span class="category-tag">${esc(c.type)}</span>`:'—'}</td>
       <td><span style="font-size:13px;">${esc(c.storage||'—')}</span></td>
@@ -2644,7 +2741,9 @@ function renderChemTable(){
 function openAddChemModal(){
   editingChemId=null; pendingFileData=null;
   document.getElementById('chem-modal-title').textContent='Add Chemical';
-  ['cf-name','cf-formula','cf-location','cf-details','cf-safety-link'].forEach(id=>document.getElementById(id).value='');
+  ['cf-name','cf-formula','cf-location','cf-details','cf-safety-link','cf-amount','cf-minamount'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('cf-amount-unit').value='ml';
+  document.getElementById('cf-minamount-unit-display').textContent='—';
   document.getElementById('cf-type').value='';
   document.getElementById('cf-storage').value='';
   document.getElementById('cf-expiry').value='';
@@ -2663,6 +2762,10 @@ function openEditChemModal(id){
   document.getElementById('cf-storage').value=item.storage||'';
   document.getElementById('cf-location').value=item.location||'';
   document.getElementById('cf-expiry').value=item.expiry||'';
+  document.getElementById('cf-amount').value=item.amount||'';
+  document.getElementById('cf-amount-unit').value=item.amountUnit||'ml';
+  document.getElementById('cf-minamount').value=item.minAmount||'';
+  document.getElementById('cf-minamount-unit-display').textContent=item.amountUnit||'—';
   document.getElementById('cf-details').value=item.details||'';
   document.getElementById('cf-safety-link').value=item.safetyLink||'';
   const mode=item.safetyType||'none';
@@ -2687,11 +2790,15 @@ function saveChemical(){
   let safetyType='none', safetyLink='', safetyFile=null;
   if(safetyMode==='link') { safetyType='link'; safetyLink=document.getElementById('cf-safety-link').value.trim(); }
   else if(safetyMode==='pdf') { safetyType='pdf'; safetyFile=pendingFileData||null; }
+  const amountUnit = document.getElementById('cf-amount-unit').value;
   const obj={
     name, type, storage,
     formula:document.getElementById('cf-formula').value.trim(),
     location:document.getElementById('cf-location').value.trim(),
     expiry:document.getElementById('cf-expiry').value||'',
+    amount:parseFloat(document.getElementById('cf-amount').value)||0,
+    amountUnit,
+    minAmount:parseFloat(document.getElementById('cf-minamount').value)||0,
     details:document.getElementById('cf-details').value.trim(),
     safetyType, safetyLink, safetyFile,
     lastEditedBy:currentUser.name||currentUser.email,
@@ -2703,7 +2810,7 @@ function saveChemical(){
   } else {
     chemicals.unshift({id:uid(),createdDate:now,...obj});
   }
-  saveChemData(); renderChemTable(); closeChemModal();
+  saveChemData(); renderChemTable(); closeChemModal(); renderLowStockDashboard();
 }
 function deleteChem(id){
   customConfirm('This chemical entry will be permanently removed.', ()=>{
@@ -3587,8 +3694,10 @@ function closeBookingModal(){document.getElementById('booking-modal-overlay').cl
 function saveBooking(){
   const instId=document.getElementById('bk-instrument').value;const date=document.getElementById('bk-date').value;const start=document.getElementById('bk-start').value;const end=document.getElementById('bk-end').value;const user=document.getElementById('bk-user').value.trim();
   if(!instId||!date||!start||!end||!user){alert('Please fill in all required fields.');return;}
-  bookings.push({id:uid(),instId,date,start,end,user,purpose:document.getElementById('bk-purpose').value.trim(),createdDate:new Date().toISOString()});
+  const newBooking={id:uid(),instId,date,start,end,user,purpose:document.getElementById('bk-purpose').value.trim(),createdDate:new Date().toISOString()};
+  bookings.push(newBooking);
   saveBookingData(); closeBookingModal(); renderCalendar(); renderStats();
+  showBookingConfirmation(newBooking);
 }
 function deleteBooking(id){customConfirm('Cancel this booking?', ()=>{bookings=bookings.filter(b=>b.id!==id);saveBookingData();renderCalendar();renderStats();});}
 
@@ -4316,6 +4425,7 @@ async function loadAllFromFirebase() {
     { key: 'dl_documents',   varSetter: v => { docLibrary = v; } },
     { key: 'dl_checkouts',   varSetter: v => { checkouts = v; } },
     { key: 'dl_sessions',    varSetter: v => { if(v && typeof v === 'object' && !Array.isArray(v)) activeSessions = v; } },
+    { key: 'dl_samples',     varSetter: v => { samples = v; } },
   ];
 
   for (const loader of loaders) {
@@ -4792,6 +4902,218 @@ function renderInstSessionPanel(instId) {
   </div>`;
 }
 
+
+// ── Feature 4: Booking Notification ──
+function showBookingConfirmation(booking) {
+  const inst = instruments.find(i => i.id === booking.instId);
+  const instName = inst ? inst.name : 'Instrument';
+  const dateStr = new Date(booking.date).toLocaleDateString('en-US', {weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  const summary = [
+    '📅 INSTRUMENT BOOKING CONFIRMATION',
+    '─────────────────────────────────',
+    'Instrument : ' + instName,
+    'Date       : ' + dateStr,
+    'Time       : ' + booking.start + ' – ' + booking.end,
+    'Booked by  : ' + booking.user,
+    booking.purpose ? 'Purpose    : ' + booking.purpose : null,
+    '─────────────────────────────────',
+    'Daraio Lab · Caltech',
+  ].filter(Boolean).join('\n');
+
+  document.getElementById('booking-confirm-summary').textContent = summary;
+
+  // Build mailto link
+  const subject = encodeURIComponent('[Daraio Lab] Booking: ' + instName + ' on ' + booking.date);
+  const body = encodeURIComponent(summary);
+  const userEmail = regUsers.find(u => u.name === booking.user || u.email === booking.user)?.email || '';
+  document.getElementById('booking-mailto-link').href =
+    'mailto:' + userEmail + '?subject=' + subject + '&body=' + body;
+
+  document.getElementById('booking-confirm-overlay').classList.add('open');
+}
+
+function closeBookingConfirm() {
+  document.getElementById('booking-confirm-overlay').classList.remove('open');
+}
+
+function copyBookingConfirm() {
+  const text = document.getElementById('booking-confirm-summary').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('booking-copy-btn');
+    btn.textContent = '✅ Copied!';
+    setTimeout(() => { btn.textContent = '📋 Copy Summary'; }, 2000);
+  }).catch(() => {
+    // Fallback for browsers that block clipboard
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select(); document.execCommand('copy');
+    document.body.removeChild(ta);
+    const btn = document.getElementById('booking-copy-btn');
+    btn.textContent = '✅ Copied!';
+    setTimeout(() => { btn.textContent = '📋 Copy Summary'; }, 2000);
+  });
+}
+
+
+// ── Feature 5: Sample Tracking ──
+let samples = JSON.parse(localStorage.getItem('dl_samples') || '[]');
+function saveSamples() { localStorage.setItem('dl_samples', JSON.stringify(samples)); if(window._db) fbSet('dl_samples', samples); }
+let editingSampleId = null;
+
+function openSampleModal(id) {
+  editingSampleId = id;
+  ['sm-name','sm-owner','sm-project','sm-location','sm-retention','sm-prepdate','sm-notes'].forEach(f => document.getElementById(f).value = '');
+  document.getElementById('sm-status').value = 'Active';
+  document.getElementById('sample-modal-title').textContent = id ? 'Edit Sample' : 'Add Sample';
+  if (id) {
+    const s = samples.find(x => x.id === id);
+    if (s) {
+      document.getElementById('sm-name').value = s.name||'';
+      document.getElementById('sm-owner').value = s.owner||'';
+      document.getElementById('sm-project').value = s.project||'';
+      document.getElementById('sm-location').value = s.location||'';
+      document.getElementById('sm-retention').value = s.retentionDate||'';
+      document.getElementById('sm-prepdate').value = s.prepDate||'';
+      document.getElementById('sm-notes').value = s.notes||'';
+      document.getElementById('sm-status').value = s.status||'Active';
+    }
+  }
+  document.getElementById('sample-modal-overlay').classList.add('open');
+}
+function closeSampleModal() { document.getElementById('sample-modal-overlay').classList.remove('open'); }
+
+function saveSample() {
+  const name = document.getElementById('sm-name').value.trim();
+  if (!name) { alert('Please enter a sample name.'); return; }
+  const obj = {
+    name, owner: document.getElementById('sm-owner').value.trim(),
+    project: document.getElementById('sm-project').value.trim(),
+    location: document.getElementById('sm-location').value.trim(),
+    retentionDate: document.getElementById('sm-retention').value,
+    prepDate: document.getElementById('sm-prepdate').value,
+    notes: document.getElementById('sm-notes').value.trim(),
+    status: document.getElementById('sm-status').value,
+    lastEditedBy: currentUser.name||currentUser.email,
+    lastEditedDate: new Date().toISOString(),
+  };
+  if (editingSampleId) {
+    const idx = samples.findIndex(s => s.id === editingSampleId);
+    samples[idx] = { ...samples[idx], ...obj };
+    logChange('Edited', 'Samples', name, '');
+  } else {
+    const newSample = { id: uid(), createdDate: new Date().toISOString(), ...obj };
+    samples.push(newSample);
+    logChange('Added', 'Samples', name, '');
+  }
+  saveSamples(); closeSampleModal(); renderSamples();
+}
+
+function deleteSample(id) {
+  customConfirm('Delete this sample record?', () => {
+    const s = samples.find(x => x.id === id);
+    logChange('Deleted', 'Samples', s?.name||id, '');
+    samples = samples.filter(x => x.id !== id);
+    saveSamples(); renderSamples();
+  });
+}
+
+function renderSamples() {
+  const search = (document.getElementById('sample-search')||{value:''}).value.toLowerCase();
+  const stF = (document.getElementById('sample-filter-status')||{value:''}).value;
+  const ownerF = (document.getElementById('sample-filter-owner')||{value:''}).value;
+  const grid = document.getElementById('sample-grid');
+  const empty = document.getElementById('sample-empty');
+  if (!grid) return;
+
+  // Populate owner filter
+  const ownerSel = document.getElementById('sample-filter-owner');
+  if (ownerSel && ownerSel.options.length <= 1) {
+    const owners = [...new Set(samples.map(s => s.owner).filter(Boolean))].sort();
+    owners.forEach(o => { const opt = document.createElement('option'); opt.value=o; opt.textContent=o; ownerSel.appendChild(opt); });
+  }
+
+  // Update stats
+  const total = samples.length;
+  const active = samples.filter(s => s.status === 'Active').length;
+  const archived = samples.filter(s => s.status === 'Archived').length;
+  ['sample-stat-total','sample-stat-active','sample-stat-archived'].forEach((id,i) => {
+    const el = document.getElementById(id); if(el) el.textContent = [total,active,archived][i];
+  });
+
+  const now = new Date();
+  const filtered = samples.filter(s =>
+    (!search || (s.name||'').toLowerCase().includes(search) || (s.owner||'').toLowerCase().includes(search) || (s.project||'').toLowerCase().includes(search)) &&
+    (!stF || s.status === stF) && (!ownerF || s.owner === ownerF)
+  );
+
+  if (!filtered.length) { grid.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display='none';
+
+  grid.innerHTML = filtered.map(s => {
+    const retDiff = s.retentionDate ? Math.round((new Date(s.retentionDate) - now) / (1000*60*60*24)) : null;
+    const retLabel = retDiff !== null ? (retDiff < 0 ? `<span style="color:var(--danger);font-weight:600;">⚠ Retention exceeded ${Math.abs(retDiff)}d ago</span>` : retDiff < 30 ? `<span style="color:var(--warning);font-weight:600;">⏰ Expires in ${retDiff}d</span>` : `<span style="color:var(--muted);">📅 Keep until ${fmtDate(s.retentionDate)}</span>`) : '';
+    const statusCls = s.status==='Active'?'sample-active':s.status==='Archived'?'sample-archived':'sample-disposed';
+    return `<div class="sample-card">
+      <div class="sample-id">${s.id}</div>
+      <div class="sample-name">${esc(s.name)}</div>
+      <span class="sample-status-badge ${statusCls}">${esc(s.status)}</span>
+      <div class="sample-meta-row">
+        ${s.owner?`<div class="sample-meta-item">👤 ${esc(s.owner)}</div>`:''}
+        ${s.project?`<div class="sample-meta-item">📁 ${esc(s.project)}</div>`:''}
+        ${s.location?`<div class="sample-meta-item">📍 ${esc(s.location)}</div>`:''}
+        ${s.prepDate?`<div class="sample-meta-item">🗓 Prepared ${fmtDate(s.prepDate)}</div>`:''}
+      </div>
+      ${retLabel ? `<div style="margin-top:8px;font-size:12px;">${retLabel}</div>` : ''}
+      ${s.notes?`<div style="margin-top:8px;font-size:12px;color:var(--muted);line-height:1.5;">${esc(s.notes)}</div>`:''}
+      <div style="display:flex;gap:6px;margin-top:10px;">
+        <button class="btn-icon" onclick="openSampleModal('${s.id}')" title="Edit">✏️</button>
+        <button class="btn-icon danger" onclick="deleteSample('${s.id}')" title="Delete">🗑</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+
+// ── Feature 6: Low Stock Dashboard ──
+function renderLowStockDashboard() {
+  const list = document.getElementById('low-stock-list');
+  const badge = document.getElementById('low-stock-badge');
+  const panel = document.getElementById('low-stock-dashboard');
+  if (!list) return;
+
+  // Equipment alerts
+  const equipAlerts = equipment
+    .filter(e => e.minQty > 0 && e.qty <= e.minQty)
+    .map(e => ({
+      label: esc(e.name) + (e.company ? ' — ' + esc(e.company) : ''),
+      detail: e.qty + ' remaining (min: ' + e.minQty + ')',
+      tab: 'equipment',
+      ratio: e.qty / e.minQty
+    }));
+
+  // Chemical alerts
+  const chemAlerts = chemicals
+    .filter(c => c.minAmount > 0 && c.amount <= c.minAmount)
+    .map(c => ({
+      label: esc(c.name),
+      detail: c.amount + ' ' + (c.amountUnit||'') + ' remaining (min: ' + c.minAmount + ' ' + (c.amountUnit||'') + ')',
+      tab: 'chemistry',
+      ratio: c.amount / c.minAmount
+    }));
+
+  const allAlerts = [...equipAlerts, ...chemAlerts].sort((a,b) => a.ratio - b.ratio);
+
+  if (!allAlerts.length) { if(panel) panel.style.display='none'; return; }
+  if(panel) panel.style.display='block';
+  if(badge) badge.textContent = allAlerts.length + ' item' + (allAlerts.length>1?'s':'');
+
+  list.innerHTML = allAlerts.map(a => `
+    <div class="expiry-alert-item expiring" onclick="switchTab('${a.tab}')" title="Go to ${a.tab}">
+      <span class="expiry-alert-name">${a.label}</span>
+      <span class="expiry-alert-date">${a.detail}</span>
+    </div>`).join('');
+}
+
 // ── INIT ──
 // Pre-load spreadsheet data if localStorage is empty
 function _origInit() { (function() {
@@ -4812,6 +5134,7 @@ renderEquipTable();
 renderProjects();
 renderExpiryDashboard();
 renderNoticeBoard();
+renderLowStockDashboard();
 } // end _origInit
 
 // ── Start the app ──
@@ -4921,6 +5244,80 @@ if (window._firebaseReady) {
     <div style="display:flex;gap:8px;justify-content:center;">
       <button class="btn-secondary" onclick="closeBadgeScanModal()">Cancel</button>
       <button class="btn-primary" style="width:auto;padding:9px 20px;" onclick="confirmBadgeScan()" id="badge-confirm-btn">Confirm</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- Booking Confirmation Modal -->
+<div class="modal-overlay" id="booking-confirm-overlay" onclick="if(event.target===this)closeBookingConfirm()">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-header">
+      <h3>✅ Booking Confirmed</h3>
+      <button class="btn-close" onclick="closeBookingConfirm()">&#x2715;</button>
+    </div>
+    <div class="modal-body">
+      <div id="booking-confirm-summary" style="
+        background:var(--bg);border:1px solid var(--border);border-radius:10px;
+        padding:16px;font-size:13px;line-height:1.8;font-family:'DM Mono',monospace;
+        margin-bottom:16px;white-space:pre-wrap;
+      "></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <a id="booking-mailto-link" href="#" target="_blank"
+          style="display:inline-flex;align-items:center;gap:6px;padding:9px 16px;
+          background:var(--accent);color:#fff;border-radius:8px;text-decoration:none;
+          font-size:13px;font-weight:500;transition:opacity 0.15s;"
+          onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+          ✉️ Send Email Confirmation
+        </a>
+        <button onclick="copyBookingConfirm()" id="booking-copy-btn"
+          style="padding:9px 16px;border:1px solid var(--border);border-radius:8px;
+          background:var(--surface);font-size:13px;font-family:inherit;cursor:pointer;">
+          📋 Copy Summary
+        </button>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-primary" style="width:auto;padding:9px 24px;" onclick="closeBookingConfirm()">Done</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- Sample Modal -->
+<div class="modal-overlay" id="sample-modal-overlay" onclick="if(event.target===this)closeSampleModal()">
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-header">
+      <h3 id="sample-modal-title">Add Sample</h3>
+      <button class="btn-close" onclick="closeSampleModal()">&#x2715;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-field full"><label>Sample Name / ID <span class="required">*</span></label>
+          <input type="text" id="sm-name" placeholder="e.g. PDMS Membrane Batch 3"/></div>
+        <div class="form-field"><label>Owner</label>
+          <input type="text" id="sm-owner" placeholder="e.g. Naci Keskin"/></div>
+        <div class="form-field"><label>Status</label>
+          <select id="sm-status">
+            <option value="Active">Active</option>
+            <option value="Archived">Archived</option>
+            <option value="Disposed">Disposed</option>
+          </select></div>
+        <div class="form-field full"><label>Project / Experiment</label>
+          <input type="text" id="sm-project" placeholder="e.g. Impedance Testing"/></div>
+        <div class="form-field"><label>Storage Location</label>
+          <input type="text" id="sm-location" placeholder="e.g. B255C Fridge"/></div>
+        <div class="form-field"><label>Retention Date</label>
+          <input type="date" id="sm-retention"/></div>
+        <div class="form-field full"><label>Preparation Date</label>
+          <input type="date" id="sm-prepdate"/></div>
+        <div class="form-field full"><label>Notes / Composition</label>
+          <textarea id="sm-notes" placeholder="Composition, preparation method, hazards..." style="min-height:70px;"></textarea></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeSampleModal()">Cancel</button>
+      <button class="btn-primary" style="width:auto;padding:9px 24px;" onclick="saveSample()">Save Sample</button>
     </div>
   </div>
 </div>
