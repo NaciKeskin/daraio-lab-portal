@@ -2504,6 +2504,8 @@ function attemptAccess() {
     const params=new URLSearchParams(window.location.search);
     const instParam=params.get('inst');
     if(instParam){ switchTab('instruments'); setTimeout(()=>selectInstrument(instParam),100); }
+    const tabParam = params.get('tab');
+    if(tabParam){ setTimeout(()=>switchTab(tabParam), 100); }
   },400);
 }
 
@@ -4034,12 +4036,39 @@ function buildInstURL(instId){
   const base=getQRBaseUrl();
   return base + '?inst=' + encodeURIComponent(instId);
 }
+function buildTabURL(tab){
+  const base=getQRBaseUrl();
+  return base + '?tab=' + encodeURIComponent(tab);
+}
 function renderQRGrid(){
   const urlInput=document.getElementById('qr-base-url');
   if(urlInput) urlInput.value=getQRBaseUrl();
   const grid=document.getElementById('qr-grid');
   if(!grid) return;
-  grid.innerHTML=instruments.map((inst,i)=>{
+
+  // ── Static section QR codes ──
+  const staticQRs = [
+    { id: 'tab-chemistry', label: 'Chemical Inventory', sublabel: 'Daraio Lab · B255C', tab: 'chemistry', icon: '🧪' },
+    { id: 'tab-equipment', label: 'Equipment Inventory', sublabel: 'Daraio Lab · B255', tab: 'equipment', icon: '⚙️' },
+  ];
+
+  const staticHTML = `
+    <div style="grid-column:1/-1;font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;padding-bottom:4px;border-bottom:1px solid var(--border);margin-bottom:4px;">
+      📌 Section QR Codes
+    </div>
+    ${staticQRs.map(q => `
+      <div class="stats-card" style="display:flex;flex-direction:column;align-items:center;gap:10px;">
+        <div style="font-size:24px;">${q.icon}</div>
+        <div style="font-size:13px;font-weight:600;text-align:center;">${esc(q.label)}</div>
+        <div style="font-size:12px;color:var(--muted);">${esc(q.sublabel)}</div>
+        <canvas id="qr-thumb-${q.id}" width="120" height="120" style="border-radius:6px;border:1px solid var(--border);background:#fff;padding:6px;"></canvas>
+        <button class="btn-secondary" style="font-size:12px;padding:5px 14px;" onclick="openTabQRModal('${q.id}','${q.label}','${q.sublabel}','${q.tab}')">📱 View &amp; Print</button>
+      </div>`).join('')}
+    <div style="grid-column:1/-1;font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;padding-bottom:4px;border-bottom:1px solid var(--border);margin-bottom:4px;margin-top:8px;">
+      🔬 Instrument QR Codes
+    </div>`;
+
+  grid.innerHTML = staticHTML + instruments.map((inst,i)=>{
     const ci=INST_COLORS[i%INST_COLORS.length];
     return `<div class="stats-card" style="display:flex;flex-direction:column;align-items:center;gap:10px;">
       <div style="font-size:13px;font-weight:600;text-align:center;">${esc(inst.name)}</div>
@@ -4052,6 +4081,11 @@ function renderQRGrid(){
   instruments.forEach(inst=>{
     const canvas=document.getElementById('qr-thumb-'+inst.id);
     if(canvas) drawQR(canvas, buildInstURL(inst.id), 120);
+  });
+  // Draw static section thumbnails
+  staticQRs.forEach(q=>{
+    const canvas=document.getElementById('qr-thumb-'+q.id);
+    if(canvas) drawQR(canvas, buildTabURL(q.tab), 120);
   });
 }
 function drawQR(canvas, text, size){
@@ -4083,6 +4117,33 @@ function openQRModal(instId){
   }, 150);
 }
 function closeQRModal(){document.getElementById('qr-modal-overlay').classList.remove('open');}
+
+let _currentTabQR = null;
+function openTabQRModal(id, label, sublabel, tab) {
+  _currentTabQR = { id, label, tab };
+  document.getElementById('qr-modal-name').textContent = label;
+  document.getElementById('qr-modal-meta').textContent = sublabel;
+  const url = buildTabURL(tab);
+  document.getElementById('qr-modal-url').textContent = url;
+  // Update description text
+  const desc = document.querySelector('#qr-modal-overlay p');
+  if (desc) desc.textContent = 'Scanning this QR code will open the portal and navigate directly to the ' + label + ' tab. Print it and post it in the lab.';
+  document.getElementById('qr-modal-overlay').classList.add('open');
+  setTimeout(() => {
+    const canvas = document.getElementById('qr-modal-canvas');
+    drawQR(canvas, url, 200);
+    // Override download to use tab label
+    document.querySelector('#qr-modal-overlay .btn-primary').onclick = downloadTabQR;
+  }, 150);
+}
+function downloadTabQR() {
+  const canvas = document.getElementById('qr-modal-canvas');
+  const link = document.createElement('a');
+  link.download = (_currentTabQR ? _currentTabQR.label : 'QR').replace(/\s+/g,'_') + '_QR.png';
+  link.href = canvas.toDataURL('image/png'); link.click();
+  // Restore download button to original
+  document.querySelector('#qr-modal-overlay .btn-primary').onclick = downloadQR;
+}
 function downloadQR(){
   const canvas=document.getElementById('qr-modal-canvas');
   const inst=instruments.find(i=>i.id===currentQRInstId);
