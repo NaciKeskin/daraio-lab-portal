@@ -8,6 +8,9 @@ A single-file web portal for managing lab resources at the Daraio Research Group
 - 📁 Projects Tracker
 - 🔬 Instruments & Booking Calendar
 - 💎 High-Value Items Registry
+- Lab Members
+- Samples
+- Documents
 - 🔐 Admin Panel (change history, QR codes, settings, backup/restore)
 - 🌙 Dark mode
 - 🔍 Global search
