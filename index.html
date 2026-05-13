@@ -1113,6 +1113,81 @@
   }
   .issues-badge.warn { background:var(--warning); }
 
+
+  /* ── Lab Map ── */
+  .map-page-layout {
+    display: flex; gap: 16px; height: calc(100vh - 180px); min-height: 500px;
+  }
+  .map-canvas-wrap {
+    flex: 1; position: relative; background: var(--bg);
+    border: 1.5px solid var(--border); border-radius: var(--radius);
+    overflow: hidden; box-shadow: var(--shadow);
+    cursor: default;
+  }
+  .map-canvas-wrap.edit-mode { cursor: crosshair; }
+  #lab-map-canvas { display: block; width: 100%; height: 100%; }
+
+  /* Zone popover */
+  .map-popover {
+    position: absolute; z-index: 200;
+    background: var(--surface); border: 1.5px solid var(--border);
+    border-radius: 12px; box-shadow: var(--shadow-lg);
+    padding: 0; width: 280px; max-height: 400px;
+    display: flex; flex-direction: column;
+    animation: popFade 0.15s ease;
+  }
+  @keyframes popFade { from { opacity:0; transform:scale(0.95); } to { opacity:1; transform:scale(1); } }
+  .map-popover-header {
+    padding: 12px 14px 10px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .map-popover-title { font-size: 14px; font-weight: 600; }
+  .map-popover-close {
+    background: none; border: none; cursor: pointer;
+    font-size: 18px; color: var(--muted); line-height: 1; padding: 0 2px;
+  }
+  .map-popover-body { overflow-y: auto; padding: 10px 14px 14px; flex: 1; }
+  .map-popover-section { font-size: 11px; font-weight: 700; color: var(--muted);
+    text-transform: uppercase; letter-spacing: .05em; margin: 8px 0 5px; }
+  .map-popover-item {
+    display: flex; align-items: flex-start; gap: 6px;
+    padding: 5px 0; border-bottom: 1px solid var(--border); font-size: 12px;
+  }
+  .map-popover-item:last-child { border-bottom: none; }
+  .map-popover-item-name { flex: 1; font-weight: 500; }
+  .map-popover-item-meta { color: var(--muted); font-size: 11px; flex-shrink: 0; }
+  .map-popover-empty { font-size: 12px; color: var(--muted); padding: 6px 0; }
+
+  /* Map sidebar */
+  .map-sidebar {
+    width: 220px; flex-shrink: 0;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .map-sidebar-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 14px; box-shadow: var(--shadow);
+  }
+  .map-sidebar-title { font-size: 12px; font-weight: 700; color: var(--muted);
+    text-transform: uppercase; letter-spacing: .05em; margin-bottom: 10px; }
+  .map-legend-item {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 12px; margin-bottom: 6px;
+  }
+  .map-legend-dot { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+  .map-zone-edit-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 5px 0; border-bottom: 1px solid var(--border); font-size: 12px;
+  }
+  .map-zone-edit-item:last-child { border-bottom: none; }
+  .map-toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
+  .map-mode-btn {
+    padding: 6px 14px; border-radius: 8px; font-size: 12px; font-weight: 600;
+    border: 1.5px solid var(--border); background: var(--surface); color: var(--muted);
+    cursor: pointer; font-family: inherit; transition: all 0.15s;
+  }
+  .map-mode-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .map-mode-btn:hover:not(.active) { border-color: var(--accent); color: var(--accent); }
+
 </style>
   <!-- Firebase SDK -->
   <script type="module">
@@ -1190,7 +1265,7 @@
       </div>
     </div>
     <button class="btn-primary" onclick="attemptAccess()">Enter Portal →</button>
-    <p class="access-hint">Demo code: <span>1234</span></p>
+
   </div>
 </div>
 
@@ -1208,6 +1283,7 @@
       <button class="nav-tab" onclick="switchTab('instruments')" id="tab-instruments">🔬 <span>Instruments</span></button>
       <button class="nav-tab" onclick="switchTab('highvalue')" id="tab-highvalue">💎 <span>High-Value Items</span></button>
       <button class="nav-tab" onclick="switchTab('members')" id="tab-members">👥 <span>Lab Members</span></button>
+      <button class="nav-tab" onclick="switchTab('labmap')" id="tab-labmap">🗺 <span>Lab Map</span></button>
       <button class="nav-tab" onclick="switchTab('samples')" id="tab-samples">🧬 <span>Samples</span></button>
       <button class="nav-tab" onclick="switchTab('documents')" id="tab-documents">📚 <span>Documents</span></button>
       <button class="nav-tab admin-only-tab" onclick="switchTab('admin')" id="tab-admin" style="display:none;">🔐 <span>Admin</span></button>
@@ -1235,6 +1311,18 @@
       <p>A centralized hub for managing lab resources — from equipment and chemicals to ongoing projects and high-value instruments. Use the tabs above to navigate between sections.</p>
       <p class="hero-meta">Caltech · Daraio Research Group</p>
     </div>
+    <!-- Lab Map Mini Preview -->
+    <div id="home-map-preview" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:24px;box-shadow:var(--shadow);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <p style="font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin:0;">🗺 Lab Map</p>
+        <button onclick="switchTab('labmap')" class="btn-secondary" style="font-size:12px;padding:5px 12px;">Open full map →</button>
+      </div>
+      <div style="position:relative;cursor:pointer;" onclick="switchTab('labmap')">
+        <canvas id="map-mini-canvas" style="width:100%;border-radius:8px;display:block;"></canvas>
+        <div style="position:absolute;inset:0;border-radius:8px;background:transparent;" title="Click to open full map"></div>
+      </div>
+    </div>
+
     <div class="notice-board" id="notice-board">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
         <p class="notice-board-title" style="margin:0;">📌 Announcements</p>
@@ -1259,49 +1347,55 @@
     </div>
     <p class="home-sections-title">Portal Sections</p>
     <div class="home-cards">
-      <div class="home-card" onclick="switchTab('equipment')">
+      <div class="home-card" onclick="switchTab('equipment')" id="home-card-equipment">
         <div class="home-card-icon">⚙️</div>
         <h3>Equipment Inventory</h3>
         <p>Track all lab equipment including name, model, serial number, location, quantity, and availability status. Add, edit, or remove items at any time.</p>
         <span class="card-status live">● Active</span>
       </div>
-      <div class="home-card" onclick="switchTab('chemistry')">
+      <div class="home-card" onclick="switchTab('chemistry')" id="home-card-chemistry">
         <div class="home-card-icon">🧪</div>
         <h3>Chemical Inventory</h3>
         <p>Manage all chemicals in the lab with safety information, storage type, expiration dates, chemical formulas, and SDS links or uploaded safety documents.</p>
         <span class="card-status live">● Active</span>
       </div>
-      <div class="home-card" onclick="switchTab('projects')">
+      <div class="home-card" onclick="switchTab('projects')" id="home-card-projects">
         <div class="home-card-icon">📁</div>
         <h3>Projects</h3>
         <p>Track ongoing and completed research projects with sample notes, storage locations, owner info, and automatic 7-year retention alerts.</p>
         <span class="card-status live">&#x25CF; Active</span>
       </div>
-      <div class="home-card" onclick="switchTab('instruments')">
+      <div class="home-card" onclick="switchTab('instruments')" id="home-card-instruments">
         <div class="home-card-icon">🔬</div>
         <h3>Instruments</h3>
         <p>A dedicated section for high-value instruments requiring formal training. Includes user manuals, training requirements, and booking information.</p>
         <span class="card-status live">&#x25CF; Active</span>
       </div>
-      <div class="home-card" onclick="switchTab('samples')">
+      <div class="home-card" onclick="switchTab('labmap')" id="home-card-labmap">
+        <div class="home-card-icon">🗺</div>
+        <h3>Lab Map</h3>
+        <p>Interactive floor plan showing where equipment, chemicals, and samples are stored.</p>
+        <span class="card-status live">● Active</span>
+      </div>
+      <div class="home-card" onclick="switchTab('samples')" id="home-card-samples">
         <div class="home-card-icon">🧬</div>
         <h3>Sample Tracking</h3>
         <p>Log physical samples with storage location, owner, project, and retention date.</p>
         <span class="card-status live">● Active</span>
       </div>
-      <div class="home-card" onclick="switchTab('documents')">
+      <div class="home-card" onclick="switchTab('documents')" id="home-card-documents">
         <div class="home-card-icon">📚</div>
         <h3>Document Library</h3>
         <p>Lab protocols, SOPs, safety documents, and onboarding materials all in one place.</p>
         <span class="card-status live">● Active</span>
       </div>
-      <div class="home-card" onclick="switchTab('members')">
+      <div class="home-card" onclick="switchTab('members')" id="home-card-members">
         <div class="home-card-icon">👥</div>
         <h3>Lab Members</h3>
         <p>Directory of current Daraio Research Group members with roles and contact info.</p>
         <span class="card-status live">● Active</span>
       </div>
-      <div class="home-card" onclick="switchTab('highvalue')">
+      <div class="home-card" onclick="switchTab('highvalue')" id="home-card-highvalue">
         <div class="home-card-icon">💎</div>
         <h3>High-Value Items</h3>
         <p>A registry of high-value lab assets with estimated values, insurance info, and asset tags. Visible to all, editable by admins only.</p>
@@ -1925,6 +2019,58 @@
 
 
 
+
+  <!-- LAB MAP -->
+  <div class="page" id="page-labmap">
+    <div class="page-header">
+      <div><h2>🗺 Lab Map</h2><p>Interactive floor plan — click any zone to see what's stored there.</p></div>
+      <div class="map-toolbar">
+        <button class="map-mode-btn active" id="map-view-btn" onclick="setMapMode('view')">👁 View</button>
+        <button class="map-mode-btn admin-only-btn" id="map-edit-btn" onclick="setMapMode('edit')" style="display:none;">✏️ Edit Furniture</button>
+        <div style="display:flex;gap:4px;align-items:center;margin-left:4px;">
+          <button class="btn-secondary" onclick="mapZoomOut()" style="padding:5px 10px;font-size:14px;" title="Zoom out">−</button>
+          <button class="btn-secondary" onclick="mapZoomReset()" style="padding:5px 10px;font-size:12px;" title="Reset zoom">1:1</button>
+          <button class="btn-secondary" onclick="mapZoomIn()" style="padding:5px 10px;font-size:14px;" title="Zoom in">+</button>
+        </div>
+        <button class="btn-export" onclick="exportMapImage()" title="Download as PNG">⬇ PNG</button>
+      </div>
+    </div>
+    <div class="map-page-layout">
+      <div class="map-canvas-wrap" id="map-canvas-wrap">
+        <canvas id="lab-map-canvas"></canvas>
+        <div id="map-popover" class="map-popover" style="display:none;"></div>
+        <div id="map-edit-hint" style="display:none;position:absolute;bottom:12px;left:50%;transform:translateX(-50%);background:var(--accent);color:#fff;padding:6px 16px;border-radius:20px;font-size:12px;font-weight:500;pointer-events:none;">
+          Click to place zone · Drag to move · Double-click to rename
+        </div>
+      </div>
+      <div class="map-sidebar">
+        <div class="map-sidebar-card">
+          <div class="map-sidebar-title">Legend</div>
+          <div class="map-legend-item"><div class="map-legend-dot" style="background:#e8f4fd;border:1.5px solid #1a1a2e;"></div>Rooms / Walls</div>
+          <div class="map-legend-item"><div class="map-legend-dot" style="background:#4f8ef7;"></div>Optical Tables</div>
+          <div class="map-legend-item"><div class="map-legend-dot" style="background:#2e9e6b;"></div>Lab Tables / Benches</div>
+          <div class="map-legend-item"><div class="map-legend-dot" style="background:#e04f5f;"></div>Equipment</div>
+          <div class="map-legend-item"><div class="map-legend-dot" style="background:#7c5cbf;"></div>Consoles</div>
+          <div class="map-legend-item"><div class="map-legend-dot" style="background:#d97706;"></div>Shelving Units</div>
+          <div class="map-legend-item"><div class="map-legend-dot" style="background:#dc2626;border:1px dashed #dc2626;"></div>Fume Hoods (fixed)</div>
+        </div>
+        <div class="map-sidebar-card" id="map-stats-card">
+          <div class="map-sidebar-title">Zone Stats</div>
+          <div id="map-stats-list" style="font-size:12px;color:var(--muted);">Click a zone to see details.</div>
+        </div>
+        <div class="map-sidebar-card admin-only-btn" id="map-edit-card" style="display:none;">
+          <div class="map-sidebar-title">Edit Furniture</div>
+          <div id="map-zone-edit-list" style="max-height:180px;overflow-y:auto;margin-bottom:8px;"></div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:8px;line-height:1.5;">
+            🖱 <strong>Draw</strong> a rectangle to place a new item<br>
+            🖱 <strong>Drag</strong> to move · corner to resize<br>
+            🖱 <strong>Double-click</strong> to edit label
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- SAMPLE TRACKING -->
   <div class="page" id="page-samples">
     <div class="page-header">
@@ -2101,6 +2247,19 @@
             <button class="btn-export" onclick="exportJSON()">⬇ Download Full Backup</button>
             <button class="btn-export" onclick="importJSON()">⬆ Restore from Backup</button>
           </div>
+        </div>
+      </div>
+
+      <!-- Tab Visibility Manager -->
+      <div class="admin-section" style="max-width:560px;margin-top:20px;">
+        <div class="admin-section-header">
+          <div class="admin-section-title">🚧 Tab Visibility</div>
+        </div>
+        <div class="admin-section-body">
+          <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">
+            Hide tabs from regular users while they are under construction. Admins always see all tabs.
+          </p>
+          <div id="tab-visibility-list" style="display:flex;flex-direction:column;gap:8px;"></div>
         </div>
       </div>
     </div>
@@ -2549,6 +2708,7 @@ function attemptAccess() {
   setTimeout(()=>{
     screen.style.display='none';
     document.getElementById('app').style.display='block';
+    applyTabVisibility();
     const params=new URLSearchParams(window.location.search);
     const instParam=params.get('inst');
     if(instParam){ switchTab('instruments'); setTimeout(()=>selectInstrument(instParam),100); }
@@ -2561,7 +2721,7 @@ function attemptAccess() {
 function switchTab(tab) {
   document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  if(tab==='home') { setTimeout(renderExpiryDashboard, 50); setTimeout(renderNoticeBoard, 50); setTimeout(renderLowStockDashboard, 50); setTimeout(renderIssuesDashboard, 50); }
+  if(tab==='home') { setTimeout(renderExpiryDashboard, 50); setTimeout(renderNoticeBoard, 50); setTimeout(renderLowStockDashboard, 50); setTimeout(renderIssuesDashboard, 50); setTimeout(renderMapMiniPreview, 200); }
   const tabEl=document.getElementById('tab-'+tab);
   if(tabEl) tabEl.classList.add('active');
   const pageEl=document.getElementById('page-'+tab);
@@ -2574,6 +2734,7 @@ function switchTab(tab) {
   if(tab==='members') { if(typeof renderMembers==='function') renderMembers(); }
   if(tab==='documents') { if(typeof renderDocLibrary==='function') renderDocLibrary(); }
   if(tab==='samples') { if(typeof renderSamples==='function') renderSamples(); }
+  if(tab==='labmap') { if(typeof initLabMap==='function') initLabMap(); }
   if(tab==='admin') { if(typeof renderRegUsers==='function'){renderRegUsers();renderHistory();renderQRGrid();loadSettingsUI();} }
 }
 
@@ -3879,6 +4040,9 @@ function applyAdminMode() {
   document.getElementById('hv-add-btn').style.display = '';
   const nab = document.getElementById('notice-add-btn'); if(nab) nab.style.display='';
   const dab = document.getElementById('doc-add-btn'); if(dab) dab.style.display='';
+  const meb = document.getElementById('map-edit-btn'); if(meb) meb.style.display='';
+  const mec = document.getElementById('map-edit-card'); if(mec && _mapMode==='edit') mec.style.display='';
+  applyTabVisibility();
   document.getElementById('hv-actions-col').style.display = '';
   document.getElementById('hv-readonly-notice').style.display = 'none';
   renderHVTable();
@@ -3896,7 +4060,7 @@ function switchAdminTab(tab) {
   document.getElementById('admin-sub-'+tab).classList.add('active');
   if(tab==='history') renderHistory();
   if(tab==='qr') renderQRGrid();
-  if(tab==='settings') loadSettingsUI();
+  if(tab==='settings') { loadSettingsUI(); renderTabVisibilityList(); }
 }
 
 // ══ HIGH VALUE ITEMS ══
@@ -4541,6 +4705,9 @@ async function loadAllFromFirebase() {
     { key: 'dl_checkouts',   varSetter: v => { checkouts = v; } },
     { key: 'dl_sessions',    varSetter: v => { if(v && typeof v === 'object' && !Array.isArray(v)) activeSessions = v; } },
     { key: 'dl_inst_issues', varSetter: v => { if(v && typeof v === 'object' && !Array.isArray(v)) instIssues = v; } },
+    { key: 'dl_map_zones',     varSetter: v => { if(v && Array.isArray(v) && v.length) mapZones = v; } },
+    { key: 'dl_map_furniture', varSetter: v => { if(v && Array.isArray(v) && v.length) furniture = v; } },
+    { key: 'dl_hidden_tabs',   varSetter: v => { if(v && Array.isArray(v)) hiddenTabs = new Set(v); } },
     { key: 'dl_samples',     varSetter: v => { samples = v; } },
   ];
 
@@ -5466,6 +5633,929 @@ function renderIssuesDashboard() {
     </div>`).join('');
 }
 
+
+// ══════════════════════════════════════════════════════════════
+// LAB MAP — Interactive floor plan with custom image background
+// ══════════════════════════════════════════════════════════════
+
+// ══════════════════════════════════════════════════════════════
+// LAB MAP — Vector-drawn floor plan (Daraio Lab, Gates-Thomas B255)
+// Rooms and walls are fixed. Furniture items are draggable/resizable/editable.
+// ══════════════════════════════════════════════════════════════
+
+// ── COORDINATE SYSTEM ──
+// Canvas units = pixels at 1:1. The floor plan is drawn at a logical
+// coordinate space of 1000 x 680 units which we scale to fill the canvas.
+
+const MAP_W = 1000, MAP_H = 680; // logical coordinate space
+
+// ── FIXED ARCHITECTURE (walls, rooms) ──
+// Defined as polygons in logical coords. These are NOT editable.
+// Derived from the PDF floor plan proportions.
+const ROOMS = [
+  {
+    id: 'B255', label: 'B255 — Mechanical Testing Lab', sqft: '1,021 sf',
+    color: '#e8f4fd',
+    walls: [[60,30],[700,30],[700,400],[620,400],[620,480],[380,480],[380,400],[60,400]],
+  },
+  {
+    id: 'B255A', label: 'B255A — Utility Room', sqft: '110 sf',
+    color: '#f0f7ee',
+    walls: [[10,30],[60,30],[60,400],[10,400]],
+  },
+  {
+    id: 'B255B', label: 'B255B — Wet Chem Lab', sqft: '236 sf',
+    color: '#fff8e6',
+    walls: [[700,30],[980,30],[980,400],[700,400]],
+  },
+  {
+    id: 'B255C', label: 'B255C — BioLab', sqft: '323 sf',
+    color: '#fef0f0',
+    walls: [[700,400],[980,400],[980,680],[700,680]],
+  },
+  {
+    id: 'B255C1', label: 'B255C1 — Confocal Room', sqft: '86 sf',
+    color: '#fdf4ff',
+    walls: [[820,480],[980,480],[980,560],[820,560]],
+  },
+  {
+    id: 'B255D', label: 'B255D — Plant BioLab', sqft: '193 sf',
+    color: '#eefaf4',
+    walls: [[380,480],[620,480],[620,680],[380,680]],
+  },
+];
+
+// ── FIXED FEATURES (fume hoods, sinks, built-in counters, doors, etc.) ──
+// These are drawn as shapes but are NOT movable.
+const FIXED_FEATURES = [
+  // B255 — Main lab bench height counter (south wall of B255)
+  { type:'counter', label:'Bench Counter (glass cabinets above)', x:380, y:455, w:240, h:25, room:'B255' },
+  { type:'counter', label:'Soldering Station', x:255, y:30, w:55, h:40, room:'B255' },
+  { type:'fumehood', label:'Chemical Fume Hood (5\')', x:380, y:30, w:70, h:55, room:'B255' },
+  // B255 electrical panel area
+  { type:'panel', label:'Relocated Electrical Panels', x:10, y:50, w:50, h:80, room:'B255A' },
+  // B255B wet chem
+  { type:'counter', label:'Wet Chem Counter', x:700, y:370, w:280, h:30, room:'B255B' },
+  { type:'fumehood', label:'Acid & Solvent Cabinet', x:930, y:30, w:50, h:60, room:'B255B' },
+  { type:'shelving', label:'Storage Shelves', x:870, y:295, w:50, h:100, room:'B255B' },
+  { type:'shelving', label:'Nanoscribe Area', x:790, y:30, w:80, h:120, room:'B255B' },
+  // B255C biolab
+  { type:'fumehood', label:'4" Chemical Fume Hood', x:820, y:400, w:60, h:80, room:'B255C' },
+  { type:'counter', label:'Under-Counter / -80°C Freezer', x:700, y:490, w:115, h:25, room:'B255C' },
+  { type:'shelving', label:'Storage Shelves', x:940, y:400, w:40, h:100, room:'B255C' },
+  { type:'sink', label:'Eyewash & Shower', x:700, y:400, w:40, h:40, room:'B255C' },
+  // B255D plant lab
+  { type:'shelving', label:'Plant Shelves w/ Light+Timer', x:620, y:490, w:30, h:180, room:'B255D' },
+  { type:'counter', label:'Thermo Scientific Clean Bench', x:380, y:640, w:120, h:35, room:'B255D' },
+  // Stair
+  { type:'stair', label:'Stair 2 (B260ST)', x:230, y:480, w:150, h:180, room:null },
+  // Lab coats rack
+  { type:'misc', label:'Lab Coats & Safety Gear', x:60, y:430, w:140, h:18, room:'B255' },
+  // Bottle farm
+  { type:'misc', label:'Bottle Farm (Ar, CO2)', x:920, y:400, w:60, h:45, room:'B255C' },
+  // Milli-Q
+  { type:'misc', label:'Milli-Q', x:700, y:555, w:35, h:30, room:'B255C' },
+  // Water tank
+  { type:'misc', label:'44×68 Water Tank', x:130, y:310, w:90, h:60, room:'B255' },
+];
+
+// ── EDITABLE FURNITURE ──
+// Tables, optical tables, shelving units, consoles, equipment stands.
+// These can be moved, resized, renamed, deleted, added.
+const DEFAULT_FURNITURE = [
+  // B255 optical tables
+  { id:'f1',  label:'4×8 Optical Table',   type:'optical_table', x:90,  y:60,  w:120, h:80,  room:'B255',  color:'#4f8ef7' },
+  { id:'f2',  label:'4×6 Optical Table',   type:'optical_table', x:280, y:110, w:100, h:70,  room:'B255',  color:'#4f8ef7' },
+  { id:'f3',  label:'4×6 Optical Table',   type:'optical_table', x:280, y:245, w:100, h:70,  room:'B255',  color:'#4f8ef7' },
+  { id:'f4',  label:'4×6 Optical Table',   type:'optical_table', x:440, y:110, w:100, h:70,  room:'B255',  color:'#4f8ef7' },
+  { id:'f5',  label:'4×6 Optical Table',   type:'optical_table', x:440, y:245, w:100, h:70,  room:'B255',  color:'#4f8ef7' },
+  { id:'f6',  label:'4×6 Optical Table',   type:'optical_table', x:590, y:110, w:100, h:70,  room:'B255',  color:'#4f8ef7' },
+  { id:'f7',  label:'4×6 Optical Table',   type:'optical_table', x:590, y:245, w:100, h:70,  room:'B255',  color:'#4f8ef7' },
+  // Instron
+  { id:'f8',  label:'Instron 3000\nMech. Testing Machine', type:'equipment', x:335, y:115, w:80, h:90, room:'B255', color:'#e04f5f' },
+  // Consoles
+  { id:'f9',  label:'Mobile Console',      type:'console',       x:245, y:195, w:50,  h:55,  room:'B255',  color:'#7c5cbf' },
+  { id:'f10', label:'Mobile Console',      type:'console',       x:400, y:195, w:50,  h:55,  room:'B255',  color:'#7c5cbf' },
+  { id:'f11', label:'Mobile Console',      type:'console',       x:560, y:195, w:50,  h:55,  room:'B255',  color:'#7c5cbf' },
+  // B255B wet chem tables
+  { id:'f12', label:'4×6 Optical Table',   type:'optical_table', x:710, y:80,  w:100, h:70,  room:'B255B', color:'#4f8ef7' },
+  { id:'f13', label:'4×6 Optical Table',   type:'optical_table', x:830, y:80,  w:100, h:70,  room:'B255B', color:'#4f8ef7' },
+  { id:'f14', label:'4×6 Optical Table',   type:'optical_table', x:830, y:210, w:100, h:70,  room:'B255B', color:'#4f8ef7' },
+  { id:'f15', label:'Mobile Console',      type:'console',       x:710, y:185, w:50,  h:55,  room:'B255B', color:'#7c5cbf' },
+  { id:'f16', label:'Mobile Console',      type:'console',       x:900, y:185, w:50,  h:55,  room:'B255B', color:'#7c5cbf' },
+  // B255C biolab
+  { id:'f17', label:'Shaker',              type:'equipment',     x:710, y:410, w:40,  h:40,  room:'B255C', color:'#e04f5f' },
+  { id:'f18', label:'Kube Maker',          type:'equipment',     x:700, y:450, w:40,  h:35,  room:'B255C', color:'#e04f5f' },
+  { id:'f19', label:'Incubator Stack',     type:'equipment',     x:625, y:490, w:40,  h:120, room:'B255D', color:'#e04f5f' },
+  { id:'f20', label:'30×60 Lab Table',    type:'table',         x:740, y:600, w:90,  h:55,  room:'B255C', color:'#2e9e6b' },
+  // B255C1 confocal
+  { id:'f21', label:'4×6 Optical Table',   type:'optical_table', x:830, y:490, w:100, h:65,  room:'B255C1',color:'#4f8ef7' },
+  // B255D plant lab
+  { id:'f22', label:'30×72 Lab Table',    type:'table',         x:390, y:600, w:110, h:55,  room:'B255D', color:'#2e9e6b' },
+  { id:'f23', label:'Storage Shelves',     type:'shelving',      x:390, y:485, w:40,  h:110, room:'B255D', color:'#2e9e6b' },
+];
+
+// Runtime furniture state (loaded from localStorage/Firebase)
+let furniture = JSON.parse(localStorage.getItem('dl_map_furniture') || 'null') || DEFAULT_FURNITURE.map(f=>({...f}));
+function saveFurniture() {
+  localStorage.setItem('dl_map_furniture', JSON.stringify(furniture));
+  if (window._db) fbSet('dl_map_furniture', furniture);
+}
+
+// mapZones kept for inventory overlay (which zone = which location)
+let mapZones = JSON.parse(localStorage.getItem('dl_map_zones') || 'null') || [
+  { id:'zone_b255',  label:'B255',  x:60,  y:30,  w:640, h:370 },
+  { id:'zone_b255a', label:'B255A', x:10,  y:30,  w:50,  h:370 },
+  { id:'zone_b255b', label:'B255B', x:700, y:30,  w:280, h:370 },
+  { id:'zone_b255c', label:'B255C', x:700, y:400, w:280, h:280 },
+  { id:'zone_b255d', label:'B255D', x:380, y:480, w:240, h:200 },
+];
+function saveMapZones() {
+  localStorage.setItem('dl_map_zones', JSON.stringify(mapZones));
+  if (window._db) fbSet('dl_map_zones', mapZones);
+}
+
+// ── CANVAS STATE ──
+let _mapMode = 'view'; // 'view' | 'edit'
+let _mapCanvas = null, _mapCtx = null;
+let _mapScale = 1; // logical to canvas pixels
+let _mapOffX = 0, _mapOffY = 0; // pan offset
+let _mapDragging = null; // { itemId, offX, offY }
+let _mapResizing = null; // { itemId }
+let _mapSelected = null; // selected furniture id
+let _mapLastMouse = null;
+let _dragMoved = false;
+let _mapDrawingNew = false;
+let _newItemStart = null;
+let _mapActiveZone = null;
+
+// Zoom/pan
+let _zoom = 1.0;
+const MIN_ZOOM = 0.5, MAX_ZOOM = 3.0;
+
+// Furniture type definitions
+const FURNITURE_TYPES = {
+  optical_table: { label:'Optical Table', color:'#4f8ef7', icon:'⊞' },
+  table:         { label:'Lab Table',     color:'#2e9e6b', icon:'▭' },
+  equipment:     { label:'Equipment',     color:'#e04f5f', icon:'⬡' },
+  console:       { label:'Console',       color:'#7c5cbf', icon:'▣' },
+  shelving:      { label:'Shelving Unit', color:'#d97706', icon:'≡' },
+  fume_hood:     { label:'Fume Hood',     color:'#dc2626', icon:'⚗' },
+  bench:         { label:'Lab Bench',     color:'#059669', icon:'▬' },
+  custom:        { label:'Custom',        color:'#64748b', icon:'◆' },
+};
+
+// ── COORDINATE HELPERS ──
+function logicalToCanvas(lx, ly) {
+  return {
+    x: _mapOffX + lx * _zoom * _mapScale,
+    y: _mapOffY + ly * _zoom * _mapScale,
+  };
+}
+function canvasToLogical(cx, cy) {
+  return {
+    x: (cx - _mapOffX) / (_zoom * _mapScale),
+    y: (cy - _mapOffY) / (_zoom * _mapScale),
+  };
+}
+function getCanvasPos(e) {
+  const rect = _mapCanvas.getBoundingClientRect();
+  const scaleX = _mapCanvas.width  / rect.width;
+  const scaleY = _mapCanvas.height / rect.height;
+  return {
+    cx: (e.clientX - rect.left) * scaleX,
+    cy: (e.clientY - rect.top)  * scaleY,
+  };
+}
+
+
+// ══════════════════════════════════════════════════
+// TAB VISIBILITY MANAGER
+// ══════════════════════════════════════════════════
+
+// All manageable tabs — id matches nav button id and home card id
+const MANAGEABLE_TABS = [
+  { id:'equipment',   label:'Equipment Inventory',  icon:'⚙️',  homeCardId:'home-card-equipment'  },
+  { id:'chemistry',   label:'Chemical Inventory',   icon:'🧪',  homeCardId:'home-card-chemistry'   },
+  { id:'projects',    label:'Projects',             icon:'📁',  homeCardId:'home-card-projects'    },
+  { id:'instruments', label:'Instruments',          icon:'🔬',  homeCardId:'home-card-instruments' },
+  { id:'highvalue',   label:'High-Value Items',     icon:'💎',  homeCardId:'home-card-highvalue'   },
+  { id:'members',     label:'Lab Members',          icon:'👥',  homeCardId:'home-card-members'     },
+  { id:'labmap',      label:'Lab Map',              icon:'🗺',  homeCardId:'home-card-labmap'      },
+  { id:'samples',     label:'Sample Tracking',      icon:'🧬',  homeCardId:'home-card-samples'     },
+  { id:'documents',   label:'Document Library',     icon:'📚',  homeCardId:'home-card-documents'   },
+];
+
+// Hidden tabs stored as a set of tab ids
+let hiddenTabs = new Set(JSON.parse(localStorage.getItem('dl_hidden_tabs') || '["labmap"]'));
+
+function saveHiddenTabs() {
+  const arr = [...hiddenTabs];
+  localStorage.setItem('dl_hidden_tabs', JSON.stringify(arr));
+  if (window._db) fbSet('dl_hidden_tabs', arr);
+}
+
+function applyTabVisibility() {
+  MANAGEABLE_TABS.forEach(tab => {
+    const isHidden = hiddenTabs.has(tab.id);
+    const navBtn = document.getElementById('tab-' + tab.id);
+    const homeCard = document.getElementById('home-card-' + tab.id);
+
+    if (isAdmin) {
+      // Admins always see all tabs — but show a visual indicator if hidden
+      if (navBtn) {
+        navBtn.style.display = '';
+        navBtn.style.opacity = isHidden ? '0.45' : '';
+        navBtn.title = isHidden ? '🚧 Hidden from users' : '';
+      }
+      if (homeCard) {
+        homeCard.style.display = '';
+        homeCard.style.opacity = isHidden ? '0.45' : '';
+      }
+    } else {
+      // Regular users: hide if in hiddenTabs
+      if (navBtn) navBtn.style.display = isHidden ? 'none' : '';
+      if (homeCard) homeCard.style.display = isHidden ? 'none' : '';
+    }
+
+    // Also hide the home map mini-preview if labmap is hidden for non-admins
+    if (tab.id === 'labmap') {
+      const miniPreview = document.getElementById('home-map-preview');
+      if (miniPreview) {
+        miniPreview.style.display = (isHidden && !isAdmin) ? 'none' : '';
+      }
+    }
+  });
+}
+
+function toggleTabVisibility(tabId) {
+  if (hiddenTabs.has(tabId)) {
+    hiddenTabs.delete(tabId);
+  } else {
+    hiddenTabs.add(tabId);
+    // If currently on this tab, switch to home
+    if (typeof activeTab !== 'undefined' && activeTab === tabId) {
+      switchTab('home');
+    }
+  }
+  saveHiddenTabs();
+  applyTabVisibility();
+  renderTabVisibilityList();
+}
+
+function renderTabVisibilityList() {
+  const list = document.getElementById('tab-visibility-list');
+  if (!list) return;
+  list.innerHTML = MANAGEABLE_TABS.map(tab => {
+    const isHidden = hiddenTabs.has(tab.id);
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--bg);border:1px solid var(--border);border-radius:8px;${isHidden?'opacity:0.7;':''}" >
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span style="font-size:16px;">${tab.icon}</span>
+        <div>
+          <div style="font-size:13px;font-weight:500;">${esc(tab.label)}</div>
+          <div style="font-size:11px;color:var(--muted);">${isHidden ? '🚧 Hidden from users' : '✅ Visible to all'}</div>
+        </div>
+      </div>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;">
+        <span style="font-size:12px;color:var(--muted);">${isHidden ? 'Show' : 'Hide'}</span>
+        <div onclick="toggleTabVisibility('${tab.id}')" style="
+          width:40px;height:22px;border-radius:11px;position:relative;cursor:pointer;
+          background:${isHidden ? 'var(--border)' : 'var(--accent)'};
+          transition:background 0.2s;flex-shrink:0;
+        ">
+          <div style="
+            position:absolute;top:3px;width:16px;height:16px;border-radius:50%;
+            background:#fff;box-shadow:0 1px 3px rgba(0,0,0,0.2);
+            transition:left 0.2s;left:${isHidden ? '3px' : '21px'};
+          "></div>
+        </div>
+      </label>
+    </div>`;
+  }).join('');
+}
+
+// ── INIT ──
+function initMapCanvas() {
+  _mapCanvas = document.getElementById('lab-map-canvas');
+  if (!_mapCanvas) return;
+  resizeMapCanvas();
+  window.addEventListener('resize', resizeMapCanvas);
+
+  _mapCanvas.addEventListener('click',      onMapClick);
+  _mapCanvas.addEventListener('dblclick',   onMapDblClick);
+  _mapCanvas.addEventListener('mousedown',  onMapMouseDown);
+  _mapCanvas.addEventListener('mousemove',  onMapMouseMove);
+  _mapCanvas.addEventListener('mouseup',    onMapMouseUp);
+  _mapCanvas.addEventListener('mouseleave', onMapMouseUp);
+  _mapCanvas.addEventListener('wheel',      onMapWheel, {passive:false});
+
+  // Touch
+  _mapCanvas.addEventListener('touchstart',  e=>{ if(e.touches.length===1) onMapMouseDown(e.touches[0]); },{passive:true});
+  _mapCanvas.addEventListener('touchmove',   e=>{ if(e.touches.length===1){onMapMouseMove(e.touches[0]);e.preventDefault();} },{passive:false});
+  _mapCanvas.addEventListener('touchend',    onMapMouseUp,{passive:true});
+
+  drawMap();
+  renderMapZoneEditList();
+}
+
+function resizeMapCanvas() {
+  const wrap = document.getElementById('map-canvas-wrap');
+  if (!wrap) return;
+  _mapCanvas.width  = wrap.clientWidth  || 800;
+  _mapCanvas.height = wrap.clientHeight || 560;
+  // Scale so the logical plan fits with padding
+  const scaleX = (_mapCanvas.width  - 40) / MAP_W;
+  const scaleY = (_mapCanvas.height - 40) / MAP_H;
+  _mapScale = Math.min(scaleX, scaleY);
+  _mapOffX = (_mapCanvas.width  - MAP_W * _mapScale * _zoom) / 2;
+  _mapOffY = (_mapCanvas.height - MAP_H * _mapScale * _zoom) / 2;
+  _mapCtx = _mapCanvas.getContext('2d');
+  drawMap();
+}
+
+// ── MAIN DRAW ──
+function drawMap() {
+  if (!_mapCtx) return;
+  const ctx = _mapCtx;
+  const W = _mapCanvas.width, H = _mapCanvas.height;
+
+  // Background
+  ctx.fillStyle = '#f4f5f6';
+  ctx.fillRect(0, 0, W, H);
+
+  // Fine grid
+  ctx.strokeStyle = 'rgba(0,0,0,0.05)';
+  ctx.lineWidth = 0.5;
+  const gridStep = 20 * _zoom * _mapScale;
+  const offGX = _mapOffX % gridStep, offGY = _mapOffY % gridStep;
+  for (let gx = offGX; gx < W; gx += gridStep) { ctx.beginPath(); ctx.moveTo(gx,0); ctx.lineTo(gx,H); ctx.stroke(); }
+  for (let gy = offGY; gy < H; gy += gridStep) { ctx.beginPath(); ctx.moveTo(0,gy); ctx.lineTo(W,gy); ctx.stroke(); }
+
+  // Draw rooms
+  ROOMS.forEach(room => drawRoom(ctx, room));
+
+  // Draw fixed features
+  FIXED_FEATURES.forEach(f => drawFixedFeature(ctx, f));
+
+  // Draw furniture
+  furniture.forEach(item => drawFurnitureItem(ctx, item));
+
+  // Draw room labels (on top of everything)
+  ROOMS.forEach(room => drawRoomLabel(ctx, room));
+
+  // Rubber band for new item
+  if (_newItemStart && _mapLastMouse) {
+    const s = logicalToCanvas(_newItemStart.x, _newItemStart.y);
+    const e = logicalToCanvas(_mapLastMouse.x, _mapLastMouse.y);
+    ctx.save();
+    ctx.setLineDash([5,3]);
+    ctx.strokeStyle = '#1d4e89';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(Math.min(s.x,e.x), Math.min(s.y,e.y), Math.abs(e.x-s.x), Math.abs(e.y-s.y));
+    ctx.restore();
+  }
+
+  // Scale bar
+  drawScaleBar(ctx);
+}
+
+function drawRoom(ctx, room) {
+  const pts = room.walls.map(([x,y]) => logicalToCanvas(x,y));
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(pts[0].x, pts[0].y);
+  pts.slice(1).forEach(p => ctx.lineTo(p.x, p.y));
+  ctx.closePath();
+  ctx.fillStyle = room.color;
+  ctx.fill();
+  ctx.strokeStyle = '#1a1a2e';
+  ctx.lineWidth = Math.max(2, 3 * _zoom * _mapScale / 1);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawRoomLabel(ctx, room) {
+  // Compute centroid
+  const cx = room.walls.reduce((s,[x])=>s+x,0)/room.walls.length;
+  const cy = room.walls.reduce((s,[,y])=>s+y,0)/room.walls.length;
+  const {x,y} = logicalToCanvas(cx, cy);
+  ctx.save();
+  ctx.textAlign = 'center';
+  ctx.fillStyle = 'rgba(0,0,0,0.25)';
+  ctx.font = `bold ${Math.max(9, 14 * _zoom * _mapScale)}px 'DM Mono',monospace`;
+  ctx.fillText(room.id, x, y);
+  if (_zoom * _mapScale > 0.7) {
+    ctx.font = `${Math.max(7, 9 * _zoom * _mapScale)}px sans-serif`;
+    ctx.fillStyle = 'rgba(0,0,0,0.18)';
+    ctx.fillText(room.sqft, x, y + 14 * _zoom * _mapScale);
+  }
+  ctx.restore();
+}
+
+function drawFixedFeature(ctx, f) {
+  const {x,y} = logicalToCanvas(f.x, f.y);
+  const w = f.w * _zoom * _mapScale, h = f.h * _zoom * _mapScale;
+  ctx.save();
+  let fillColor, strokeColor, pattern = 'solid';
+  switch(f.type) {
+    case 'fumehood': fillColor='rgba(220,38,38,0.12)'; strokeColor='#dc2626'; break;
+    case 'counter':  fillColor='rgba(0,0,0,0.06)';     strokeColor='#555';    break;
+    case 'shelving': fillColor='rgba(217,119,6,0.15)'; strokeColor='#d97706'; break;
+    case 'panel':    fillColor='rgba(100,116,139,0.2)';strokeColor='#64748b'; pattern='hatch'; break;
+    case 'stair':    fillColor='rgba(0,0,0,0.04)';     strokeColor='#999';    break;
+    case 'sink':     fillColor='rgba(14,116,212,0.15)';strokeColor='#0e74d4'; break;
+    default:         fillColor='rgba(0,0,0,0.06)';     strokeColor='#777';
+  }
+  ctx.fillStyle = fillColor;
+  ctx.fillRect(x, y, w, h);
+  if (pattern === 'hatch') {
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = 0.5;
+    ctx.setLineDash([3,3]);
+    for (let i = 0; i < w+h; i+=8) {
+      ctx.beginPath(); ctx.moveTo(x+i,y); ctx.lineTo(x,y+i); ctx.stroke();
+    }
+    ctx.setLineDash([]);
+  }
+  // Fume hood sash lines
+  if (f.type === 'fumehood') {
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4,2]);
+    ctx.beginPath(); ctx.moveTo(x+w*0.1,y+h*0.5); ctx.lineTo(x+w*0.9,y+h*0.5); ctx.stroke();
+    ctx.setLineDash([]);
+    // Arrow indicating opening
+    ctx.beginPath(); ctx.moveTo(x+w/2,y+h*0.3); ctx.lineTo(x+w/2,y+h*0.7); ctx.stroke();
+  }
+  ctx.strokeStyle = strokeColor;
+  ctx.lineWidth = 1;
+  ctx.strokeRect(x, y, w, h);
+  // Label if zoom is sufficient
+  if (_zoom * _mapScale > 0.6 && w > 30) {
+    ctx.fillStyle = strokeColor;
+    ctx.font = `${Math.max(6, 7.5 * _zoom * _mapScale)}px sans-serif`;
+    ctx.textAlign = 'center';
+    const lines = f.label.split('\n');
+    lines.forEach((line,i) => ctx.fillText(line, x+w/2, y+h/2 + (i - lines.length/2 + 0.5)*9*_zoom*_mapScale));
+  }
+  ctx.restore();
+}
+
+function drawFurnitureItem(ctx, item) {
+  const {x,y} = logicalToCanvas(item.x, item.y);
+  const w = item.w * _zoom * _mapScale, h = item.h * _zoom * _mapScale;
+  const isSelected = _mapSelected === item.id;
+  const color = item.color || FURNITURE_TYPES[item.type]?.color || '#4f8ef7';
+  const r = 4;
+
+  ctx.save();
+
+  // Shadow when selected
+  if (isSelected) {
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 8;
+  }
+
+  // Rounded rect
+  ctx.beginPath();
+  ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y); ctx.arcTo(x+w,y,x+w,y+r,r);
+  ctx.lineTo(x+w,y+h-r); ctx.arcTo(x+w,y+h,x+w-r,y+h,r);
+  ctx.lineTo(x+r,y+h); ctx.arcTo(x,y+h,x,y+h-r,r);
+  ctx.lineTo(x,y+r); ctx.arcTo(x,y,x+r,y,r); ctx.closePath();
+
+  // Fill
+  ctx.fillStyle = hexToRgba(color, isSelected ? 0.35 : 0.2);
+  ctx.fill();
+
+  // Border
+  ctx.strokeStyle = isSelected ? color : hexToRgba(color, 0.7);
+  ctx.lineWidth = isSelected ? 2 : 1.2;
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  // Optical table crosshatch (distinctive look)
+  if (item.type === 'optical_table') {
+    ctx.strokeStyle = hexToRgba(color, 0.25);
+    ctx.lineWidth = 0.5;
+    const step = Math.max(6, 10 * _zoom * _mapScale);
+    for (let gx = x; gx < x+w; gx+=step) { ctx.beginPath(); ctx.moveTo(gx,y); ctx.lineTo(gx,y+h); ctx.stroke(); }
+    for (let gy = y; gy < y+h; gy+=step) { ctx.beginPath(); ctx.moveTo(x,gy); ctx.lineTo(x+w,gy); ctx.stroke(); }
+    ctx.strokeStyle = hexToRgba(color, 0.7);
+    ctx.lineWidth = isSelected ? 2 : 1.2;
+    ctx.stroke();
+  }
+
+  // Label
+  if (_zoom * _mapScale > 0.45 && w > 25) {
+    ctx.fillStyle = isSelected ? color : '#1a1a2e';
+    ctx.font = `${isSelected?'600 ':''}${Math.max(7, 8.5 * _zoom * _mapScale)}px 'DM Sans',sans-serif`;
+    ctx.textAlign = 'center';
+    const maxW = w - 6;
+    const lines = wrapText(ctx, item.label, maxW);
+    const lineH = 10 * _zoom * _mapScale;
+    const totalH = lines.length * lineH;
+    lines.forEach((line,i) => {
+      ctx.fillText(line, x+w/2, y+h/2 - totalH/2 + (i+0.75)*lineH);
+    });
+  }
+
+  // Edit mode handles
+  if (_mapMode === 'edit') {
+    // Resize handle bottom-right
+    const hs = 8;
+    ctx.fillStyle = color;
+    ctx.fillRect(x+w-hs, y+h-hs, hs, hs);
+    // Move indicator top-left
+    ctx.fillStyle = hexToRgba(color, 0.6);
+    ctx.beginPath(); ctx.arc(x+8,y+8,4,0,Math.PI*2); ctx.fill();
+  }
+
+  ctx.restore();
+}
+
+function wrapText(ctx, text, maxW) {
+  const words = text.split(' ');
+  const lines = [];
+  let cur = '';
+  words.forEach(word => {
+    const test = cur ? cur+' '+word : word;
+    if (ctx.measureText(test).width > maxW && cur) { lines.push(cur); cur=word; }
+    else cur=test;
+  });
+  if (cur) lines.push(cur);
+  return lines;
+}
+
+function drawScaleBar(ctx) {
+  // 5 logical units = ~5 feet → draw a simple scale indicator
+  const {x:x0,y:y0} = logicalToCanvas(10, MAP_H-20);
+  const {x:x1}       = logicalToCanvas(10+100, MAP_H-20);
+  ctx.save();
+  ctx.strokeStyle = '#333';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(x0,y0); ctx.lineTo(x1,y0); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x0,y0-4); ctx.lineTo(x0,y0+4); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x1,y0-4); ctx.lineTo(x1,y0+4); ctx.stroke();
+  ctx.fillStyle='#333'; ctx.font=`${Math.max(8,9*_zoom*_mapScale)}px sans-serif`; ctx.textAlign='center';
+  ctx.fillText('~50 ft', (x0+x1)/2, y0-6);
+  ctx.restore();
+}
+
+function hexToRgba(hex, alpha) {
+  const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+// ── HIT TESTING ──
+function furnitureAtPoint(lx, ly) {
+  return [...furniture].reverse().find(f =>
+    lx>=f.x && lx<=f.x+f.w && ly>=f.y && ly<=f.y+f.h
+  ) || null;
+}
+function resizeHandleAt(lx, ly, item) {
+  if (!item) return false;
+  const margin = 8 / (_zoom * _mapScale);
+  return lx >= item.x+item.w-margin && lx <= item.x+item.w &&
+         ly >= item.y+item.h-margin && ly <= item.y+item.h;
+}
+function roomAtPoint(lx, ly) {
+  // Simple bounding box check
+  return ROOMS.find(r => {
+    const xs=r.walls.map(([x])=>x), ys=r.walls.map(([,y])=>y);
+    const minX=Math.min(...xs),maxX=Math.max(...xs),minY=Math.min(...ys),maxY=Math.max(...ys);
+    return lx>=minX&&lx<=maxX&&ly>=minY&&ly<=maxY;
+  }) || null;
+}
+function zoneAtPoint(lx, ly) {
+  return mapZones.find(z => lx>=z.x&&lx<=z.x+z.w&&ly>=z.y&&ly<=z.y+z.h) || null;
+}
+
+// ── EVENTS ──
+function onMapClick(e) {
+  if (_dragMoved) return;
+  const {cx,cy} = getCanvasPos(e);
+  const {x:lx,y:ly} = canvasToLogical(cx,cy);
+  const item = furnitureAtPoint(lx,ly);
+  if (item) {
+    _mapSelected = item.id;
+    showFurniturePopover(item, e);
+    updateMapStats(item);
+  } else {
+    // Check zones for inventory
+    const zone = zoneAtPoint(lx,ly);
+    if (zone) { _mapSelected=null; showZonePopover(zone,e); }
+    else { _mapSelected=null; closeMapPopover(); document.getElementById('map-stats-list').innerHTML='Click a zone or furniture item to see details.'; }
+  }
+  drawMap();
+}
+
+function onMapDblClick(e) {
+  if (_mapMode!=='edit') return;
+  const {cx,cy}=getCanvasPos(e);
+  const {x:lx,y:ly}=canvasToLogical(cx,cy);
+  const item=furnitureAtPoint(lx,ly);
+  if (item) openFurnitureEditModal(item.id);
+}
+
+function onMapMouseDown(e) {
+  _dragMoved=false;
+  const {cx,cy}=getCanvasPos(e);
+  const {x:lx,y:ly}=canvasToLogical(cx,cy);
+  _mapLastMouse={x:lx,y:ly};
+  if (_mapMode!=='edit') return;
+  const item=furnitureAtPoint(lx,ly);
+  if (item) {
+    if (resizeHandleAt(lx,ly,item)) { _mapResizing={id:item.id}; _mapSelected=item.id; }
+    else { _mapDragging={id:item.id,offX:lx-item.x,offY:ly-item.y}; _mapSelected=item.id; }
+  } else {
+    _mapSelected=null;
+    _newItemStart={x:lx,y:ly};
+    _mapDrawingNew=true;
+  }
+  drawMap();
+}
+
+function onMapMouseMove(e) {
+  const {cx,cy}=getCanvasPos(e);
+  const {x:lx,y:ly}=canvasToLogical(cx,cy);
+  _mapLastMouse={x:lx,y:ly};
+  if (_mapResizing) {
+    _dragMoved=true;
+    const item=furniture.find(f=>f.id===_mapResizing.id);
+    if (item) { item.w=Math.max(20,lx-item.x); item.h=Math.max(15,ly-item.y); }
+    drawMap(); return;
+  }
+  if (_mapDragging) {
+    _dragMoved=true;
+    const item=furniture.find(f=>f.id===_mapDragging.id);
+    if (item) { item.x=Math.round(lx-_mapDragging.offX); item.y=Math.round(ly-_mapDragging.offY); }
+    drawMap(); return;
+  }
+  if (_mapDrawingNew) { _dragMoved=true; drawMap(); return; }
+  // Cursor
+  if (_mapMode==='edit') {
+    const item=furnitureAtPoint(lx,ly);
+    _mapCanvas.style.cursor = item ? (resizeHandleAt(lx,ly,item)?'se-resize':'move') : 'crosshair';
+  }
+}
+
+function onMapMouseUp(e) {
+  if (_mapDrawingNew && _newItemStart && _mapLastMouse && _dragMoved) {
+    const x=Math.min(_newItemStart.x,_mapLastMouse.x);
+    const y=Math.min(_newItemStart.y,_mapLastMouse.y);
+    const w=Math.abs(_mapLastMouse.x-_newItemStart.x);
+    const h=Math.abs(_mapLastMouse.y-_newItemStart.y);
+    if (w>15 && h>10) promptNewFurniture(x,y,w,h);
+  }
+  if ((_mapDragging||_mapResizing)&&_dragMoved) saveFurniture();
+  _mapDragging=null; _mapResizing=null; _mapDrawingNew=false; _newItemStart=null;
+  if (_mapMode==='edit') _mapCanvas.style.cursor='crosshair';
+}
+
+function onMapWheel(e) {
+  e.preventDefault();
+  const delta = e.deltaY > 0 ? 0.9 : 1.1;
+  const {cx,cy}=getCanvasPos(e);
+  const prevZoom=_zoom;
+  _zoom=Math.max(MIN_ZOOM,Math.min(MAX_ZOOM,_zoom*delta));
+  // Zoom toward cursor
+  _mapOffX=cx-(_zoom/prevZoom)*(cx-_mapOffX);
+  _mapOffY=cy-(_zoom/prevZoom)*(cy-_mapOffY);
+  drawMap();
+}
+
+// ── POPOVERS ──
+function showFurniturePopover(item, mouseEvent) {
+  const inv = buildZoneInventory();
+  // Find matching zone
+  const zone = mapZones.find(z => item.x>=z.x&&item.x+item.w<=z.x+z.w&&item.y>=z.y&&item.y+item.h<=z.y+z.h);
+  const zoneInv = zone ? inv[zone.id] : {equipment:[],chemicals:[]};
+  const typeInfo = FURNITURE_TYPES[item.type] || FURNITURE_TYPES.custom;
+  let html = `<div class="map-popover-header">
+    <div class="map-popover-title" style="color:${item.color||typeInfo.color};">${typeInfo.icon} ${esc(item.label)}</div>
+    <button class="map-popover-close" onclick="closeMapPopover()">×</button>
+  </div><div class="map-popover-body">
+    <div style="font-size:11px;color:var(--muted);margin-bottom:8px;">${typeInfo.label}${zone?` · ${esc(zone.label)}`:''}</div>`;
+  if (_mapMode==='edit') {
+    html+=`<div style="display:flex;gap:6px;margin-bottom:10px;">
+      <button class="btn-secondary" style="font-size:11px;padding:4px 10px;" onclick="openFurnitureEditModal('${item.id}');closeMapPopover();">✏️ Edit</button>
+      <button class="btn-secondary" style="font-size:11px;padding:4px 10px;color:var(--danger);" onclick="deleteFurnitureItem('${item.id}');closeMapPopover();">🗑 Remove</button>
+    </div>`;
+  }
+  if (zoneInv.equipment.length || zoneInv.chemicals.length) {
+    html+=`<div class="map-popover-section">Items in this zone</div>`;
+    zoneInv.equipment.slice(0,5).forEach(e=>{html+=`<div class="map-popover-item"><span class="map-popover-item-name">⚙️ ${esc(e.name)}</span></div>`;});
+    zoneInv.chemicals.slice(0,5).forEach(c=>{html+=`<div class="map-popover-item"><span class="map-popover-item-name">🧪 ${esc(c.name)}</span></div>`;});
+    const more=(zoneInv.equipment.length+zoneInv.chemicals.length)-10;
+    if(more>0) html+=`<div class="map-popover-empty">+${more} more in zone</div>`;
+  }
+  html+='</div>';
+  positionAndShowPopover(html, mouseEvent);
+}
+
+function showZonePopover(zone, mouseEvent) {
+  const inv = buildZoneInventory();
+  const zInv = inv[zone.id]||{equipment:[],chemicals:[]};
+  const total = zInv.equipment.length+zInv.chemicals.length;
+  let html=`<div class="map-popover-header">
+    <div class="map-popover-title">📍 ${esc(zone.label)}</div>
+    <button class="map-popover-close" onclick="closeMapPopover()">×</button>
+  </div><div class="map-popover-body">`;
+  if (!total) html+=`<div class="map-popover-empty">No items mapped here yet.</div>`;
+  else {
+    if(zInv.equipment.length){html+=`<div class="map-popover-section">⚙️ Equipment (${zInv.equipment.length})</div>`;zInv.equipment.slice(0,8).forEach(e=>{html+=`<div class="map-popover-item"><span class="map-popover-item-name">${esc(e.name)}</span><span class="map-popover-item-meta">${esc(e.status||'')}</span></div>`;});if(zInv.equipment.length>8)html+=`<div class="map-popover-empty">+${zInv.equipment.length-8} more</div>`;}
+    if(zInv.chemicals.length){html+=`<div class="map-popover-section">🧪 Chemicals (${zInv.chemicals.length})</div>`;zInv.chemicals.slice(0,8).forEach(c=>{html+=`<div class="map-popover-item"><span class="map-popover-item-name">${esc(c.name)}</span><span class="map-popover-item-meta" style="font-family:monospace;font-size:10px;">${esc(c.formula||'')}</span></div>`;});if(zInv.chemicals.length>8)html+=`<div class="map-popover-empty">+${zInv.chemicals.length-8} more</div>`;}
+  }
+  html+='</div>';
+  positionAndShowPopover(html, mouseEvent);
+}
+
+function positionAndShowPopover(html, mouseEvent) {
+  const popover=document.getElementById('map-popover');
+  popover.innerHTML=html;
+  const wrap=document.getElementById('map-canvas-wrap');
+  const wRect=wrap.getBoundingClientRect();
+  let left=mouseEvent.clientX-wRect.left+12;
+  let top=mouseEvent.clientY-wRect.top-20;
+  if(left+290>wrap.clientWidth) left=mouseEvent.clientX-wRect.left-300;
+  if(top+420>wrap.clientHeight) top=wrap.clientHeight-420;
+  if(top<0) top=4;
+  popover.style.left=left+'px'; popover.style.top=top+'px';
+  popover.style.display='flex';
+}
+
+function closeMapPopover() {
+  const p=document.getElementById('map-popover'); if(p) p.style.display='none';
+  drawMap();
+}
+
+function updateMapStats(item) {
+  const typeInfo=FURNITURE_TYPES[item.type]||FURNITURE_TYPES.custom;
+  document.getElementById('map-stats-list').innerHTML=
+    `<div style="font-weight:600;margin-bottom:4px;">${typeInfo.icon} ${esc(item.label)}</div>
+     <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">${typeInfo.label}</div>
+     <div style="font-size:11px;">Size: ${Math.round(item.w)}×${Math.round(item.h)} units</div>
+     ${_mapMode==='edit'?`<div style="margin-top:8px;display:flex;gap:5px;flex-wrap:wrap;">
+       <button class="btn-secondary" style="font-size:11px;padding:4px 8px;" onclick="openFurnitureEditModal('${item.id}')">✏️ Edit</button>
+       <button class="btn-secondary" style="font-size:11px;padding:4px 8px;color:var(--danger);" onclick="deleteFurnitureItem('${item.id}')">🗑 Remove</button>
+     </div>`:''}`;
+}
+
+// ── FURNITURE CRUD ──
+function promptNewFurniture(x, y, w, h) {
+  // Use modal instead of prompts
+  _pendingNewFurniture = {x:Math.round(x),y:Math.round(y),w:Math.round(w),h:Math.round(h)};
+  document.getElementById('fe-label').value='';
+  document.getElementById('fe-type').value='table';
+  document.getElementById('furniture-modal-title').textContent='Add Item';
+  document.getElementById('furniture-modal-overlay').classList.add('open');
+}
+function openFurnitureEditModal(id) {
+  const item=furniture.find(f=>f.id===id); if(!item) return;
+  _pendingNewFurniture=null; _editingFurnitureId=id;
+  document.getElementById('fe-label').value=item.label;
+  document.getElementById('fe-type').value=item.type;
+  document.getElementById('furniture-modal-title').textContent='Edit Item';
+  document.getElementById('furniture-modal-overlay').classList.add('open');
+}
+function closeFurnitureModal() { document.getElementById('furniture-modal-overlay').classList.remove('open'); _pendingNewFurniture=null; _editingFurnitureId=null; }
+function saveFurnitureModal() {
+  const label=document.getElementById('fe-label').value.trim();
+  if(!label){alert('Please enter a label.');return;}
+  const type=document.getElementById('fe-type').value;
+  const color=FURNITURE_TYPES[type]?.color||'#4f8ef7';
+  if (_editingFurnitureId) {
+    const idx=furniture.findIndex(f=>f.id===_editingFurnitureId);
+    furniture[idx]={...furniture[idx],label,type,color};
+  } else if (_pendingNewFurniture) {
+    furniture.push({id:uid(),label,type,color,..._pendingNewFurniture});
+  }
+  saveFurniture(); closeFurnitureModal(); drawMap(); renderMapZoneEditList();
+}
+function deleteFurnitureItem(id) {
+  customConfirm('Remove this item from the map?', ()=>{
+    furniture=furniture.filter(f=>f.id!==id);
+    _mapSelected=null;
+    saveFurniture(); closeMapPopover(); drawMap(); renderMapZoneEditList();
+  });
+}
+
+let _pendingNewFurniture=null, _editingFurnitureId=null;
+
+// ── ZONE EDIT LIST (sidebar) ──
+function renderMapZoneEditList() {
+  const list=document.getElementById('map-zone-edit-list'); if(!list) return;
+  // Show furniture count by type
+  const counts={};
+  furniture.forEach(f=>{counts[f.type]=(counts[f.type]||0)+1;});
+  list.innerHTML=`<div style="font-size:11px;color:var(--muted);margin-bottom:6px;">${furniture.length} items on map</div>`+
+    Object.entries(counts).map(([type,count])=>{
+      const info=FURNITURE_TYPES[type]||FURNITURE_TYPES.custom;
+      return `<div class="map-zone-edit-item"><div style="display:flex;align-items:center;gap:6px;"><span>${info.icon}</span><span>${info.label}</span></div><span style="color:var(--muted);font-size:11px;">${count}</span></div>`;
+    }).join('')+
+    `<button onclick="resetFurnitureToDefault()" style="margin-top:8px;font-size:11px;color:var(--muted);background:none;border:none;cursor:pointer;text-decoration:underline;">↺ Reset to default</button>`;
+}
+function resetFurnitureToDefault() {
+  customConfirm('Reset all furniture to the default layout?', ()=>{
+    furniture=DEFAULT_FURNITURE.map(f=>({...f}));
+    _mapSelected=null;
+    saveFurniture(); drawMap(); renderMapZoneEditList();
+  });
+}
+
+// ── ZONE INVENTORY (for popovers) ──
+function buildZoneInventory() {
+  const inv={};
+  mapZones.forEach(z=>{inv[z.id]={equipment:[],chemicals:[]};});
+  equipment.forEach(e=>{
+    const loc=(e.location||e.locationDetail||'').toLowerCase().replace(/[\s\-]/g,'');
+    mapZones.forEach(z=>{
+      if(loc.includes(z.label.toLowerCase().replace(/[\s\-]/g,''))) inv[z.id].equipment.push(e);
+    });
+  });
+  chemicals.forEach(c=>{
+    const loc=([c.location,c.storage].filter(Boolean).join(' ')).toLowerCase().replace(/[\s\-]/g,'');
+    mapZones.forEach(z=>{
+      if(loc.includes(z.label.toLowerCase().replace(/[\s\-]/g,''))) inv[z.id].chemicals.push(c);
+    });
+  });
+  return inv;
+}
+
+// ── MAP MODE ──
+function setMapMode(mode) {
+  _mapMode=mode;
+  const wrap=document.getElementById('map-canvas-wrap');
+  const hint=document.getElementById('map-edit-hint');
+  const editCard=document.getElementById('map-edit-card');
+  if(wrap) wrap.classList.toggle('edit-mode',mode==='edit');
+  if(hint) hint.style.display=mode==='edit'?'block':'none';
+  if(editCard) editCard.style.display=mode==='edit'?'block':'none';
+  document.getElementById('map-view-btn').classList.toggle('active',mode==='view');
+  document.getElementById('map-edit-btn').classList.toggle('active',mode==='edit');
+  _mapSelected=null; closeMapPopover();
+  renderMapZoneEditList(); drawMap();
+}
+
+// ── MINI PREVIEW (home page) ──
+function renderMapMiniPreview() {
+  const canvas=document.getElementById('map-mini-canvas'); if(!canvas) return;
+  const W=canvas.width=canvas.offsetWidth||320;
+  const H=Math.round(W*MAP_H/MAP_W);
+  canvas.height=H;
+  const ctx=canvas.getContext('2d');
+  const sc=W/MAP_W;
+  ctx.fillStyle='#f4f5f6'; ctx.fillRect(0,0,W,H);
+  // Rooms
+  ROOMS.forEach(room=>{
+    const pts=room.walls.map(([x,y])=>({x:x*sc,y:y*sc}));
+    ctx.beginPath(); ctx.moveTo(pts[0].x,pts[0].y);
+    pts.slice(1).forEach(p=>ctx.lineTo(p.x,p.y)); ctx.closePath();
+    ctx.fillStyle=room.color; ctx.fill();
+    ctx.strokeStyle='#1a1a2e'; ctx.lineWidth=1; ctx.stroke();
+  });
+  // Furniture (tiny)
+  furniture.forEach(f=>{
+    ctx.fillStyle=hexToRgba(f.color||'#4f8ef7',0.4);
+    ctx.fillRect(f.x*sc,f.y*sc,f.w*sc,f.h*sc);
+    ctx.strokeStyle=hexToRgba(f.color||'#4f8ef7',0.8);
+    ctx.lineWidth=0.5; ctx.strokeRect(f.x*sc,f.y*sc,f.w*sc,f.h*sc);
+  });
+  // Room labels
+  ROOMS.forEach(room=>{
+    const cx=room.walls.reduce((s,[x])=>s+x,0)/room.walls.length*sc;
+    const cy=room.walls.reduce((s,[,y])=>s+y,0)/room.walls.length*sc;
+    ctx.fillStyle='rgba(0,0,0,0.3)'; ctx.font=`bold ${Math.max(7,9*sc)}px monospace`;
+    ctx.textAlign='center'; ctx.fillText(room.id,cx,cy);
+  });
+}
+
+// ── EXPORT ──
+function exportMapImage() {
+  if(!_mapCanvas) return;
+  const link=document.createElement('a');
+  link.download='daraio-lab-map.png';
+  link.href=_mapCanvas.toDataURL('image/png'); link.click();
+}
+
+// ── ZOOM CONTROLS ──
+function mapZoomIn()  { _zoom=Math.min(MAX_ZOOM,_zoom*1.2); resizeMapCanvas(); }
+function mapZoomOut() { _zoom=Math.max(MIN_ZOOM,_zoom/1.2); resizeMapCanvas(); }
+function mapZoomReset(){ _zoom=1.0; resizeMapCanvas(); }
+
+// ── INIT LAB MAP ──
+function initLabMap() {
+  setTimeout(()=>{
+    initMapCanvas();
+    if(isAdmin){
+      const btn=document.getElementById('map-edit-btn'); if(btn) btn.style.display='';
+      const card=document.getElementById('map-edit-card'); if(card&&_mapMode==='edit') card.style.display='';
+    }
+    renderMapZoneEditList();
+  },50);
+}
+
+
 // ── INIT ──
 // Pre-load spreadsheet data if localStorage is empty
 function _origInit() { (function() {
@@ -5488,6 +6578,7 @@ renderExpiryDashboard();
 renderNoticeBoard();
 renderLowStockDashboard();
 renderIssuesDashboard();
+applyTabVisibility();
 } // end _origInit
 
 // ── Start the app ──
@@ -5731,6 +6822,38 @@ if (window._firebaseReady) {
     <div class="modal-footer">
       <button class="btn-secondary" onclick="closeIssueModal()">Cancel</button>
       <button class="btn-primary" style="width:auto;padding:9px 24px;" onclick="saveIssue()">Save Issue</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- Furniture Edit Modal -->
+<div class="modal-overlay" id="furniture-modal-overlay" onclick="if(event.target===this)closeFurnitureModal()">
+  <div class="modal" style="max-width:380px;">
+    <div class="modal-header">
+      <h3 id="furniture-modal-title">Add Item</h3>
+      <button class="btn-close" onclick="closeFurnitureModal()">&#x2715;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-field full"><label>Label <span class="required">*</span></label>
+          <input type="text" id="fe-label" placeholder="e.g. Optical Table 3, Fume Hood, Shelf A"/></div>
+        <div class="form-field full"><label>Type</label>
+          <select id="fe-type">
+            <option value="optical_table">⊞ Optical Table</option>
+            <option value="table">▭ Lab Table / Bench</option>
+            <option value="equipment">⬡ Equipment</option>
+            <option value="console">▣ Console / Cart</option>
+            <option value="shelving">≡ Shelving Unit</option>
+            <option value="fume_hood">⚗ Fume Hood</option>
+            <option value="bench">▬ Counter / Bench</option>
+            <option value="custom">◆ Custom</option>
+          </select></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeFurnitureModal()">Cancel</button>
+      <button class="btn-primary" style="width:auto;padding:9px 24px;" onclick="saveFurnitureModal()">Save</button>
     </div>
   </div>
 </div>
