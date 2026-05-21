@@ -1021,7 +1021,9 @@
     padding:14px 16px;margin-bottom:10px;box-shadow:var(--shadow);
     border-left:3px solid var(--accent);
   }
+  .notice-item.critical { border-left-color:#dc2626; background:linear-gradient(to right, #fef2f2, var(--surface) 80%); }
   .notice-item.urgent { border-left-color:var(--danger); }
+  .notice-item.important { border-left-color:var(--warning); }
   .notice-item.info { border-left-color:var(--success); }
   .notice-title { font-size:14px;font-weight:600;margin-bottom:4px; }
   .notice-body { font-size:13px;color:var(--muted);line-height:1.5; }
@@ -1398,6 +1400,59 @@
   .attach-item-remove:hover { color:var(--danger); }
   .attach-hint { font-size:11px; color:var(--muted); text-align:center; }
 
+
+  /* Linked members picker */
+  .linked-members-picker {
+    border: 1.5px solid var(--border); border-radius: 8px;
+    padding: 8px; background: var(--bg);
+    min-height: 60px;
+    transition: border-color 0.15s;
+  }
+  .linked-members-picker:focus-within { border-color: var(--accent); }
+  .linked-members-chips {
+    display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px;
+  }
+  .linked-member-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--accent-light); color: var(--accent);
+    padding: 4px 8px 4px 10px; border-radius: 14px;
+    font-size: 12px; font-weight: 500;
+  }
+  .linked-member-chip.admin-chip {
+    background: linear-gradient(135deg,#ede9fe,#f3e8ff); color: #7c3aed;
+  }
+  .linked-member-chip .remove-chip {
+    background: none; border: none; cursor: pointer;
+    color: inherit; opacity: 0.6; font-size: 14px; line-height: 1;
+    padding: 0 2px;
+  }
+  .linked-member-chip .remove-chip:hover { opacity: 1; }
+  .linked-members-search {
+    width: 100%; padding: 6px 10px; border: none;
+    background: transparent; font-size: 13px; font-family: inherit;
+    outline: none;
+  }
+  .linked-members-suggestions {
+    position: relative; display: none;
+  }
+  .linked-members-suggestions.open { display: block; }
+  .linked-members-suggestions-list {
+    position: absolute; top: 0; left: 0; right: 0;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 6px; box-shadow: var(--shadow-lg);
+    max-height: 200px; overflow-y: auto; z-index: 50;
+  }
+  .linked-member-suggestion {
+    padding: 7px 10px; font-size: 13px; cursor: pointer;
+    display: flex; align-items: center; gap: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .linked-member-suggestion:last-child { border-bottom: none; }
+  .linked-member-suggestion:hover { background: var(--accent-light); }
+  .linked-member-suggestion.selected { background: var(--accent-light); }
+  .linked-member-suggestion .lm-name { font-weight: 500; flex: 1; }
+  .linked-member-suggestion .lm-role { font-size: 11px; color: var(--muted); }
+
 </style>
   <!-- Firebase SDK -->
   <script type="module">
@@ -1536,7 +1591,7 @@
     <div class="notice-board" id="notice-board">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
         <p class="notice-board-title" style="margin:0;">📌 Announcements</p>
-        <button class="btn-notice-add admin-only-btn" id="notice-add-btn" onclick="openNoticeModal(null)" style="display:none;">＋ Post</button>
+        <button class="btn-notice-add" id="notice-add-btn" onclick="openNoticeModal(null)">＋ Post</button>
       </div>
       <div id="notice-list"><div class="notice-empty">No announcements yet.</div></div>
     </div>
@@ -1945,6 +2000,10 @@
           <input type="date" id="if-purchase-date"/></div>
         <div class="form-field full"><label>Notes</label>
           <textarea id="if-notes" placeholder="General notes about this instrument..."></textarea></div>
+        <div class="form-field full">
+          <label>Points of Contact <span style="color:var(--muted);font-weight:400;">(go-to people for questions, training, problems)</span></label>
+          <div id="if-poc-picker" class="linked-members-picker"></div>
+        </div>
         <div class="form-field full" id="if-attach-slot"></div>
       </div>
     </div>
@@ -2542,6 +2601,16 @@
           </div>
           <div id="badge-scan-status" style="font-size:12px;color:var(--muted);margin-top:4px;display:none;"></div>
         </div>
+        <div class="form-field full" id="ru-admin-field" style="display:none;">
+          <label>Admin Privileges</label>
+          <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:10px 14px;background:var(--bg);border:1px solid var(--border);border-radius:8px;">
+            <input type="checkbox" id="ru-isadmin" style="width:18px;height:18px;cursor:pointer;"/>
+            <div style="flex:1;">
+              <div style="font-size:13px;font-weight:600;">Designate as Admin</div>
+              <div style="font-size:11px;color:var(--muted);margin-top:2px;">Visible badge in Lab Members. Does not replace the admin login code.</div>
+            </div>
+          </label>
+        </div>
       </div>
     </div>
     <div class="modal-footer">
@@ -2594,9 +2663,13 @@
             <option value="Complete">Complete</option>
           </select>
         </div>
+        <div class="form-field full">
+          <label>Linked Lab Members <span style="color:var(--muted);font-weight:400;">(optional — select from registered members)</span></label>
+          <div id="pf-linked-members" class="linked-members-picker"></div>
+        </div>
         <div class="form-field">
           <label>Primary Owner <span class="required">*</span></label>
-          <input type="text" id="pf-owner" placeholder="e.g. Dr. Jane Smith"/>
+          <input type="text" id="pf-owner" placeholder="e.g. Dr. Jane Smith (or external collaborator)"/>
         </div>
         <div class="form-field">
           <label>Owner Email <span class="required">*</span></label>
@@ -3481,6 +3554,11 @@ function selectProject(id) {
       </div>
     </div>
 
+    ${p.linkedMembers && p.linkedMembers.length ? `<div class="proj-detail-section">
+      <div class="proj-detail-section-title">Linked Lab Members</div>
+      ${linkedMembersDisplay(p.linkedMembers)}
+    </div>` : ''}
+
     ${p.notes ? `<div class="proj-detail-section">
       <div class="proj-detail-section-title">Project Notes</div>
       <div class="proj-notes-box">${esc(p.notes)}</div>
@@ -3505,6 +3583,7 @@ function openAddProjModal() {
   document.getElementById('pf-enddate').value = '';
   document.getElementById('pf-attach-slot').innerHTML = attachmentFieldHTML('project');
   initAttachBuffer('project', []);
+  initLinkedMembersPicker('pf-linked-members', 'project', []);
   document.getElementById('proj-modal-overlay').classList.add('open');
 }
 
@@ -3522,6 +3601,7 @@ function openEditProjModal(id) {
   document.getElementById('pf-notes').value = p.notes || '';
   document.getElementById('pf-attach-slot').innerHTML = attachmentFieldHTML('project');
   initAttachBuffer('project', p.attachments || []);
+  initLinkedMembersPicker('pf-linked-members', 'project', p.linkedMembers || []);
   document.getElementById('proj-modal-overlay').classList.add('open');
 }
 
@@ -3541,6 +3621,7 @@ function saveProject() {
     folder: document.getElementById('pf-folder').value.trim(),
     notes: document.getElementById('pf-notes').value.trim(),
     attachments: getAttachBuffer('project'),
+    linkedMembers: getLinkedMembers('project'),
     lastEditedBy: currentUser.name || currentUser.email,
     lastEditedDate: now,
   };
@@ -3766,6 +3847,7 @@ function renderInstSidebar(inst) {
         return maintHtml;
       })()}
       ${inst.notes?`<div class="inst-detail-item full"><div class="label">Notes</div><div class="value proj-notes-box">${esc(inst.notes)}</div></div>`:''}
+      ${inst.pointsOfContact && inst.pointsOfContact.length ? `<div class="inst-detail-item full"><div class="label">📌 Points of Contact</div><div class="value">${linkedMembersDisplay(inst.pointsOfContact)}</div></div>` : ''}
       ${inst.modalAttachments && inst.modalAttachments.length ? `<div class="inst-detail-item full"><div class="label">Manuals, Datasheets &amp; Links</div><div class="value">${attachmentsDisplay(inst.modalAttachments)}</div></div>` : ''}
     </div>
   </div>
@@ -3848,6 +3930,7 @@ function openAddInstModal() {
   document.getElementById('if-purchase-date').value='';
   document.getElementById('if-attach-slot').innerHTML=attachmentFieldHTML('instrument','Manuals, Datasheets & Links');
   initAttachBuffer('instrument', []);
+  initLinkedMembersPicker('if-poc-picker', 'instrument-poc', []);
   document.getElementById('inst-modal-overlay').classList.add('open');
 }
 function openEditInstModal(id) {
@@ -3866,6 +3949,7 @@ function openEditInstModal(id) {
   document.getElementById('if-notes').value=inst.notes||'';
   document.getElementById('if-attach-slot').innerHTML=attachmentFieldHTML('instrument','Manuals, Datasheets & Links');
   initAttachBuffer('instrument', inst.modalAttachments||[]);
+  initLinkedMembersPicker('if-poc-picker', 'instrument-poc', inst.pointsOfContact || []);
   document.getElementById('inst-modal-overlay').classList.add('open');
 }
 function closeInstModal() { document.getElementById('inst-modal-overlay').classList.remove('open'); }
@@ -3884,6 +3968,7 @@ function saveInstrument() {
     purchaseDate:document.getElementById('if-purchase-date').value,
     notes:document.getElementById('if-notes').value.trim(),
     modalAttachments:getAttachBuffer('instrument'),
+    pointsOfContact: getLinkedMembers('instrument-poc'),
     lastEditedBy:currentUser.name||currentUser.email,
     lastEditedDate:now,
   };
@@ -4429,7 +4514,10 @@ function openRegUserModal(id){
   ['ru-name','ru-email','ru-role','ru-notes','ru-badge'].forEach(f=>document.getElementById(f).value='');
   document.getElementById('badge-scan-status').style.display='none';
   document.getElementById('reguser-modal-title').textContent=id?'Edit Member':'Add Registered Member';
-  if(id){const u=regUsers.find(r=>r.id===id);if(u){document.getElementById('ru-name').value=u.name||'';document.getElementById('ru-email').value=u.email||'';document.getElementById('ru-role').value=u.role||'';document.getElementById('ru-notes').value=u.notes||'';document.getElementById('ru-badge').value=u.badgeUid||'';}}
+  // Reset admin checkbox; show field only when current user is admin
+  document.getElementById('ru-isadmin').checked = false;
+  document.getElementById('ru-admin-field').style.display = isAdmin ? 'block' : 'none';
+  if(id){const u=regUsers.find(r=>r.id===id);if(u){document.getElementById('ru-name').value=u.name||'';document.getElementById('ru-email').value=u.email||'';document.getElementById('ru-role').value=u.role||'';document.getElementById('ru-notes').value=u.notes||'';document.getElementById('ru-badge').value=u.badgeUid||'';document.getElementById('ru-isadmin').checked=!!u.isAdmin;}}
   document.getElementById('reguser-modal-overlay').classList.add('open');
 }
 function closeRegUserModal(){document.getElementById('reguser-modal-overlay').classList.remove('open');}
@@ -4439,10 +4527,18 @@ function saveRegUser(){
   if(!email){alert('Please enter an email address.');return;}
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){alert('Please enter a valid email address.');return;}
   const displayName=name||email;
-  const obj={name,email,role:document.getElementById('ru-role').value.trim(),notes:document.getElementById('ru-notes').value.trim(),badgeUid:document.getElementById('ru-badge').value.trim().toUpperCase(),addedBy:currentUser.name,addedDate:new Date().toISOString()};
+  // Only admins can change isAdmin flag; non-admins keep the existing value
+  let isAdminFlag = false;
+  if (editingRUId) {
+    const existing = regUsers.find(r => r.id === editingRUId);
+    isAdminFlag = existing ? !!existing.isAdmin : false;
+  }
+  if (isAdmin) isAdminFlag = document.getElementById('ru-isadmin').checked;
+  const obj={name,email,role:document.getElementById('ru-role').value.trim(),notes:document.getElementById('ru-notes').value.trim(),badgeUid:document.getElementById('ru-badge').value.trim().toUpperCase(),isAdmin:isAdminFlag,addedBy:currentUser.name,addedDate:new Date().toISOString()};
   if(editingRUId){const idx=regUsers.findIndex(r=>r.id===editingRUId);regUsers[idx]={...regUsers[idx],...obj};logChange('Edited','Registered Users',displayName,'');}
   else{regUsers.push({id:uid(),...obj});logChange('Added','Registered Users',displayName,'');}
   saveRegUsers();closeRegUserModal();renderRegUsers();
+  if(typeof renderLabMembers==='function') renderLabMembers();
 }
 function deleteRegUser(id){
   customConfirm('This member will be removed from the registered list.', ()=>{
@@ -4466,7 +4562,7 @@ function renderRegUsers(){
   container.innerHTML=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);">
     ${regUsers.map(u=>`<div class="user-entry" style="padding:10px 16px;">
       <div class="user-entry-info">
-        <div class="user-entry-name">${esc(u.email)}${u.role?` <span style="font-size:12px;color:var(--muted);font-weight:400;">· ${esc(u.role)}</span>`:''}</div>
+        <div class="user-entry-name">${esc(u.email)}${u.isAdmin?' <span style="display:inline-block;font-size:9px;font-weight:700;padding:1px 6px;border-radius:8px;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;letter-spacing:0.04em;vertical-align:middle;margin-left:4px;">★ ADMIN</span>':''}${u.role?` <span style="font-size:12px;color:var(--muted);font-weight:400;">· ${esc(u.role)}</span>`:''}</div>
         ${u.name?`<div class="user-entry-email">${esc(u.name)}</div>`:''}
         ${u.badgeUid?`<div style="font-size:11px;color:var(--muted);margin-top:2px;font-family:'DM Mono',monospace;">🪪 ${esc(u.badgeUid)}</div>`:''}
         ${u.notes?`<div style="font-size:12px;color:var(--muted);margin-top:2px;">${esc(u.notes)}</div>`:''}
@@ -5158,7 +5254,7 @@ function renderMembers() {
     const initials = (u.name||u.email||'?').charAt(0).toUpperCase();
     return `<div class="member-card">
       <div class="member-avatar-lg">${initials}</div>
-      <div class="member-card-name">${esc(u.name||'—')}</div>
+      <div class="member-card-name">${esc(u.name||'—')}${u.isAdmin?' <span style="display:inline-block;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;letter-spacing:0.04em;vertical-align:middle;margin-left:4px;">★ ADMIN</span>':''}</div>
       <div class="member-card-email">${esc(u.email)}</div>
       ${u.role ? `<div class="member-card-role">${esc(u.role)}</div>` : ''}
       ${u.notes ? `<div class="member-card-notes">${esc(u.notes)}</div>` : ''}
@@ -5189,9 +5285,19 @@ function saveNotice() {
     const idx = notices.findIndex(n => n.id === editingNoticeId);
     notices[idx] = { ...notices[idx], title, body, priority };
   } else {
-    notices.unshift({ id: uid(), title, body, priority, by: currentUser.name||currentUser.email, ts: new Date().toISOString() });
+    notices.unshift({
+      id: uid(), title, body, priority,
+      by: currentUser.name || currentUser.email,
+      byEmail: currentUser.email,
+      isAdminPost: isAdmin,
+      ts: new Date().toISOString()
+    });
   }
   saveNotices(); closeNoticeModal(); renderNoticeBoard();
+}
+function canEditNotice(n) {
+  if (isAdmin) return true;
+  return n.byEmail && currentUser.email && n.byEmail.toLowerCase() === currentUser.email.toLowerCase();
 }
 function deleteNotice(id) {
   customConfirm('Delete this announcement?', () => { notices = notices.filter(n => n.id !== id); saveNotices(); renderNoticeBoard(); });
@@ -5199,16 +5305,38 @@ function deleteNotice(id) {
 function renderNoticeBoard() {
   const list = document.getElementById('notice-list'); if(!list) return;
   if (!notices.length) { list.innerHTML = '<div class="notice-empty">No announcements yet.</div>'; return; }
-  list.innerHTML = notices.map(n => `
+  const PRIORITY_LABEL = {
+    critical:'🚨 Critical',
+    urgent:'⚠️ Urgent',
+    important:'⚡ Important',
+    normal:'📌 Normal',
+    info:'💬 Info'
+  };
+  // Sort by priority (critical first) then most recent
+  const PRIO_ORDER = { critical:0, urgent:1, important:2, normal:3, info:4 };
+  const sorted = notices.slice().sort((a,b) => {
+    const pa = PRIO_ORDER[a.priority] ?? 3;
+    const pb = PRIO_ORDER[b.priority] ?? 3;
+    if (pa !== pb) return pa - pb;
+    return new Date(b.ts) - new Date(a.ts);
+  });
+  list.innerHTML = sorted.map(n => {
+    const canEdit = canEditNotice(n);
+    return `
     <div class="notice-item ${n.priority||'normal'}">
-      <div class="notice-title">${esc(n.title)}</div>
+      <div class="notice-title">
+        ${n.isAdminPost ? '<span style="display:inline-block;font-size:9px;font-weight:700;padding:1px 6px;border-radius:8px;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;letter-spacing:0.04em;vertical-align:middle;margin-right:6px;">★ ADMIN</span>' : ''}
+        <span style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;margin-right:6px;">${PRIORITY_LABEL[n.priority||'normal']}</span>
+        ${esc(n.title)}
+      </div>
       <div class="notice-body">${esc(n.body)}</div>
       <div class="notice-meta">Posted by ${esc(n.by||'Admin')} · ${fmtDate(n.ts)}</div>
-      ${isAdmin ? `<div class="notice-actions admin-only-btn">
+      ${canEdit ? `<div class="notice-actions">
         <button class="btn-secondary" style="padding:3px 10px;font-size:12px;" onclick="openNoticeModal('${n.id}')">Edit</button>
         <button class="btn-secondary" style="padding:3px 10px;font-size:12px;color:var(--danger);" onclick="deleteNotice('${n.id}')">Delete</button>
       </div>` : ''}
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 
@@ -5548,6 +5676,7 @@ function openSampleModal(id) {
   document.getElementById('sm-status').value = 'Active';
   document.getElementById('sample-modal-title').textContent = id ? 'Edit Sample' : 'Add Sample';
   let existingAttach = [];
+  let existingLinked = [];
   if (id) {
     const s = samples.find(x => x.id === id);
     if (s) {
@@ -5560,10 +5689,12 @@ function openSampleModal(id) {
       document.getElementById('sm-notes').value = s.notes||'';
       document.getElementById('sm-status').value = s.status||'Active';
       existingAttach = s.attachments || [];
+      existingLinked = s.linkedMembers || [];
     }
   }
   document.getElementById('sm-attach-slot').innerHTML = attachmentFieldHTML('sample');
   initAttachBuffer('sample', existingAttach);
+  initLinkedMembersPicker('sm-linked-members', 'sample', existingLinked);
   document.getElementById('sample-modal-overlay').classList.add('open');
 }
 function closeSampleModal() { document.getElementById('sample-modal-overlay').classList.remove('open'); }
@@ -5580,6 +5711,7 @@ function saveSample() {
     notes: document.getElementById('sm-notes').value.trim(),
     status: document.getElementById('sm-status').value,
     attachments: getAttachBuffer('sample'),
+    linkedMembers: getLinkedMembers('sample'),
     lastEditedBy: currentUser.name||currentUser.email,
     lastEditedDate: new Date().toISOString(),
   };
@@ -5652,6 +5784,7 @@ function renderSamples() {
       </div>
       ${retLabel ? `<div style="margin-top:8px;font-size:12px;">${retLabel}</div>` : ''}
       ${s.notes?`<div style="margin-top:8px;font-size:12px;color:var(--muted);line-height:1.5;">${esc(s.notes)}</div>`:''}
+      ${s.linkedMembers && s.linkedMembers.length ? `<div style="margin-top:8px;">${linkedMembersDisplay(s.linkedMembers)}</div>` : ''}
       ${s.attachments && s.attachments.length ? `<div style="margin-top:8px;">${attachmentsDisplay(s.attachments)}</div>` : ''}
       <div style="display:flex;gap:6px;margin-top:10px;">
         <button class="btn-icon" onclick="openSampleModal('${s.id}')" title="Edit">✏️</button>
@@ -6472,6 +6605,104 @@ function attachmentsDisplay(attachments) {
     }).join('') + '</div>';
 }
 
+
+// ══════════════════════════════════════════════════════════════
+// LINKED MEMBERS PICKER (multi-select component)
+// Used in: Projects, Samples
+// Stores array of regUser IDs in the item's `linkedMembers` field
+// ══════════════════════════════════════════════════════════════
+
+const _linkedMemberBuffers = {};
+
+function initLinkedMembersPicker(slotId, context, existingIds) {
+  const slot = document.getElementById(slotId);
+  if (!slot) return;
+  _linkedMemberBuffers[context] = (existingIds || []).slice();
+  slot.innerHTML = `
+    <div class="linked-members-chips" id="${slotId}-chips"></div>
+    <input type="text" class="linked-members-search" id="${slotId}-search"
+           placeholder="Type to search members..."
+           oninput="updateLinkedMemberSuggestions('${slotId}','${context}')"
+           onfocus="updateLinkedMemberSuggestions('${slotId}','${context}')"
+           onblur="setTimeout(()=>closeLinkedMemberSuggestions('${slotId}'),200)"/>
+    <div class="linked-members-suggestions" id="${slotId}-suggestions">
+      <div class="linked-members-suggestions-list" id="${slotId}-suggestions-list"></div>
+    </div>`;
+  renderLinkedMemberChips(slotId, context);
+}
+
+function renderLinkedMemberChips(slotId, context) {
+  const chips = document.getElementById(slotId + '-chips');
+  if (!chips) return;
+  const ids = _linkedMemberBuffers[context] || [];
+  if (!ids.length) { chips.innerHTML = ''; return; }
+  chips.innerHTML = ids.map(id => {
+    const u = regUsers.find(r => r.id === id);
+    if (!u) return '';
+    const label = esc(u.name || u.email);
+    const adminClass = u.isAdmin ? ' admin-chip' : '';
+    return `<span class="linked-member-chip${adminClass}">
+      ${u.isAdmin ? '★ ' : ''}${label}
+      <button type="button" class="remove-chip" onclick="removeLinkedMember('${slotId}','${context}','${id}')" title="Remove">×</button>
+    </span>`;
+  }).join('');
+}
+
+function updateLinkedMemberSuggestions(slotId, context) {
+  const search = document.getElementById(slotId + '-search');
+  const list = document.getElementById(slotId + '-suggestions-list');
+  const wrap = document.getElementById(slotId + '-suggestions');
+  if (!search || !list || !wrap) return;
+  const q = search.value.trim().toLowerCase();
+  const selected = new Set(_linkedMemberBuffers[context] || []);
+  const matches = regUsers
+    .filter(u => !selected.has(u.id))
+    .filter(u => !q || (u.name||'').toLowerCase().includes(q) || (u.email||'').toLowerCase().includes(q) || (u.role||'').toLowerCase().includes(q))
+    .slice(0, 8);
+  if (!matches.length) { wrap.classList.remove('open'); return; }
+  wrap.classList.add('open');
+  list.innerHTML = matches.map(u => `
+    <div class="linked-member-suggestion" onclick="addLinkedMember('${slotId}','${context}','${u.id}')">
+      <span class="lm-name">${u.isAdmin?'★ ':''}${esc(u.name || u.email)}</span>
+      ${u.role ? `<span class="lm-role">${esc(u.role)}</span>` : ''}
+    </div>`).join('');
+}
+
+function addLinkedMember(slotId, context, id) {
+  if (!_linkedMemberBuffers[context]) _linkedMemberBuffers[context] = [];
+  if (!_linkedMemberBuffers[context].includes(id)) _linkedMemberBuffers[context].push(id);
+  const search = document.getElementById(slotId + '-search');
+  if (search) search.value = '';
+  closeLinkedMemberSuggestions(slotId);
+  renderLinkedMemberChips(slotId, context);
+}
+
+function removeLinkedMember(slotId, context, id) {
+  _linkedMemberBuffers[context] = (_linkedMemberBuffers[context] || []).filter(x => x !== id);
+  renderLinkedMemberChips(slotId, context);
+}
+
+function closeLinkedMemberSuggestions(slotId) {
+  const wrap = document.getElementById(slotId + '-suggestions');
+  if (wrap) wrap.classList.remove('open');
+}
+
+function getLinkedMembers(context) {
+  return (_linkedMemberBuffers[context] || []).slice();
+}
+
+// Read-only display of linked members (for detail views)
+function linkedMembersDisplay(ids) {
+  if (!ids || !ids.length) return '';
+  return '<div style="display:flex;flex-wrap:wrap;gap:6px;">' +
+    ids.map(id => {
+      const u = regUsers.find(r => r.id === id);
+      if (!u) return '';
+      const adminCls = u.isAdmin ? 'admin-chip' : '';
+      return `<span class="linked-member-chip ${adminCls}" style="cursor:default;">${u.isAdmin?'★ ':''}${esc(u.name || u.email)}</span>`;
+    }).join('') + '</div>';
+}
+
 // ── INIT ──
 function initMapCanvas() {
   _mapCanvas = document.getElementById('lab-map-canvas');
@@ -7162,11 +7393,13 @@ if (window._firebaseReady) {
           <input type="text" id="notice-title-input" placeholder="e.g. Instron out of service"/></div>
         <div class="form-field full"><label>Message <span class="required">*</span></label>
           <textarea id="notice-body-input" placeholder="Details..." style="min-height:80px;"></textarea></div>
-        <div class="form-field"><label>Priority</label>
+        <div class="form-field"><label>Priority / Urgency</label>
           <select id="notice-priority">
-            <option value="normal">Normal</option>
-            <option value="urgent">Urgent</option>
-            <option value="info">Info / Good news</option>
+            <option value="info">💬 Info / Good news</option>
+            <option value="normal" selected>📌 Normal</option>
+            <option value="important">⚡ Important</option>
+            <option value="urgent">⚠️ Urgent</option>
+            <option value="critical">🚨 Critical / Safety</option>
           </select></div>
       </div>
     </div>
@@ -7277,8 +7510,12 @@ if (window._firebaseReady) {
       <div class="form-grid">
         <div class="form-field full"><label>Sample Name / ID <span class="required">*</span></label>
           <input type="text" id="sm-name" placeholder="e.g. PDMS Membrane Batch 3"/></div>
+        <div class="form-field full">
+          <label>Linked Lab Members <span style="color:var(--muted);font-weight:400;">(optional — select from registered members)</span></label>
+          <div id="sm-linked-members" class="linked-members-picker"></div>
+        </div>
         <div class="form-field"><label>Owner</label>
-          <input type="text" id="sm-owner" placeholder="e.g. Naci Keskin"/></div>
+          <input type="text" id="sm-owner" placeholder="e.g. Naci Keskin (or external)"/></div>
         <div class="form-field"><label>Status</label>
           <select id="sm-status">
             <option value="Active">Active</option>
