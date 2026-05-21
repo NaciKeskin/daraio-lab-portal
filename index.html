@@ -168,6 +168,11 @@
 
   /* PAGES */
   .page { display: none; padding: 32px; max-width: 1200px; margin: 0 auto; }
+  /* Table pages use full available width with comfortable margins */
+  #page-equipment, #page-chemistry, #page-highvalue {
+    max-width: 100%;
+    padding: 24px clamp(16px, 4vw, 48px);
+  }
   .page.active { display: block; }
   @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
   @keyframes fadeUp { from { opacity: 0; } to { opacity: 1; } }
@@ -249,20 +254,71 @@
   /* TABLE */
   .table-wrap {
     background: var(--surface); border: 1px solid var(--border);
-    border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow);
+    border-radius: var(--radius); box-shadow: var(--shadow);
+    overflow-x: auto; overflow-y: visible;
+    /* Big, visible scrollbar */
+    scrollbar-width: auto;
+    scrollbar-color: var(--accent) var(--bg);
   }
-  table { width: 100%; border-collapse: collapse; }
+  .table-wrap::-webkit-scrollbar { height: 14px; }
+  .table-wrap::-webkit-scrollbar-track {
+    background: var(--bg);
+    border-radius: 7px;
+    margin: 0 4px;
+  }
+  .table-wrap::-webkit-scrollbar-thumb {
+    background: var(--accent);
+    border-radius: 7px;
+    border: 2px solid var(--bg);
+    min-width: 60px;
+  }
+  .table-wrap::-webkit-scrollbar-thumb:hover { background: #163e6e; }
+
+  /* Top scrollbar — a thin sibling element that mirrors the table-wrap scroll position
+     so the user can drag from the top of the table */
+  .table-top-scroll {
+    overflow-x: auto;
+    overflow-y: hidden;
+    height: 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-bottom: none;
+    border-radius: var(--radius) var(--radius) 0 0;
+    scrollbar-width: auto;
+    scrollbar-color: var(--accent) var(--bg);
+  }
+  .table-top-scroll::-webkit-scrollbar { height: 14px; }
+  .table-top-scroll::-webkit-scrollbar-track { background: var(--bg); border-radius: 7px; margin: 0 4px; }
+  .table-top-scroll::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 7px; border: 2px solid var(--bg); }
+  .table-top-scroll::-webkit-scrollbar-thumb:hover { background: #163e6e; }
+  .table-top-scroll > div { height: 1px; }
+  .table-top-scroll + .table-wrap { border-radius: 0 0 var(--radius) var(--radius); border-top: none; }
+
+  table { width: 100%; border-collapse: collapse; min-width: 900px; }
   thead { background: #f9f8f5; }
   thead th {
     padding: 11px 16px; text-align: left; font-size: 12px; font-weight: 600;
     color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em;
     border-bottom: 1px solid var(--border); white-space: nowrap;
   }
+  /* Sticky actions column — always visible on right */
+  thead th:last-child,
+  tbody td:last-child {
+    position: sticky; right: 0; z-index: 2;
+    background: var(--surface);
+    box-shadow: -3px 0 8px rgba(0,0,0,0.06);
+    border-left: 1px solid var(--border);
+  }
+  thead th:last-child { background: #f9f8f5; z-index: 3; }
+  tbody tr:hover td:last-child { background: #fafaf8; }
   tbody tr { border-bottom: 1px solid var(--border); transition: background 0.15s; }
   tbody tr:last-child { border-bottom: none; }
   tbody tr:hover { background: #fafaf8; }
   tbody td { padding: 13px 16px; font-size: 14px; vertical-align: middle; }
   .equip-name { font-weight: 500; }
+  /* Min column widths to prevent collapse */
+  .equip-table th:first-child, .equip-table td:first-child { min-width: 140px; }
+  .chem-table  th:first-child, .chem-table  td:first-child { min-width: 160px; }
   .equip-model { font-size: 12px; color: var(--muted); font-family: 'DM Mono', monospace; margin-top: 2px; }
   .status-badge {
     display: inline-flex; align-items: center; gap: 5px;
@@ -279,14 +335,16 @@
     padding: 3px 10px; font-size: 13px; font-weight: 500;
     font-family: 'DM Mono', monospace; display: inline-block;
   }
-  .actions { display: flex; gap: 6px; }
+  .actions { display: flex; gap: 6px; align-items: center; flex-wrap: nowrap; }
   .btn-icon {
-    width: 30px; height: 30px; border: 1px solid var(--border); border-radius: 6px;
+    width: 32px; height: 32px; border: 1.5px solid var(--border); border-radius: 6px;
     background: var(--surface); display: flex; align-items: center; justify-content: center;
-    cursor: pointer; font-size: 13px; transition: background 0.15s, border-color 0.15s;
+    cursor: pointer; font-size: 14px; transition: background 0.15s, border-color 0.15s, transform 0.1s;
+    color: var(--muted);
   }
-  .btn-icon:hover { background: var(--bg); border-color: var(--muted); }
-  .btn-icon.danger:hover { background: var(--danger-light); border-color: var(--danger); }
+  .btn-icon:hover { background: var(--bg); border-color: var(--accent); color: var(--accent); transform: scale(1.08); }
+  .btn-icon.danger { background: var(--danger-light); border-color: #f5c6c2; color: var(--danger); }
+  .btn-icon.danger:hover { background: var(--danger); border-color: var(--danger); color: #fff; transform: scale(1.08); }
   .empty-state { text-align: center; padding: 64px 24px; color: var(--muted); }
   .empty-state .empty-icon { font-size: 40px; margin-bottom: 14px; opacity: 0.4; }
   .empty-state h3 { font-size: 16px; font-weight: 500; margin-bottom: 6px; color: var(--text); }
@@ -1188,6 +1246,158 @@
   .map-mode-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
   .map-mode-btn:hover:not(.active) { border-color: var(--accent); color: var(--accent); }
 
+
+  /* Dark mode sticky column fix */
+  [data-theme="dark"] thead th:last-child { background: #1e2128; }
+  [data-theme="dark"] tbody td:last-child { background: var(--surface); }
+  [data-theme="dark"] tbody tr:hover td:last-child { background: #2a2d35; }
+
+
+  /* ── RESPONSIVE TABLE — card layout on mobile ── */
+  @media (max-width: 768px) {
+    #page-equipment, #page-chemistry, #page-highvalue {
+      padding: 12px;
+    }
+    .table-wrap { border: none; box-shadow: none; background: transparent; }
+
+    /* Hide the table header on mobile */
+    .equip-table thead, .chem-table thead, .hv-table thead { display: none; }
+
+    /* Each row becomes a card */
+    .equip-table tbody tr,
+    .chem-table tbody tr,
+    .hv-table tbody tr {
+      display: block;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 12px;
+      padding: 14px;
+      box-shadow: var(--shadow);
+      position: relative;
+    }
+    .equip-table tbody tr:hover,
+    .chem-table tbody tr:hover,
+    .hv-table tbody tr:hover { background: var(--surface); }
+
+    /* Each cell becomes a labeled row */
+    .equip-table tbody td,
+    .chem-table tbody td,
+    .hv-table tbody td {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 5px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+    }
+    .equip-table tbody td:last-child,
+    .chem-table tbody td:last-child,
+    .hv-table tbody td:last-child {
+      border-bottom: none;
+      position: static;
+      box-shadow: none;
+      background: transparent;
+    }
+
+    /* Data labels using data-label attribute */
+    .equip-table tbody td::before,
+    .chem-table tbody td::before,
+    .hv-table tbody td::before {
+      content: attr(data-label);
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      min-width: 90px;
+      flex-shrink: 0;
+      padding-top: 2px;
+    }
+
+    /* Actions row on mobile — full width button row */
+    .equip-table tbody td:last-child,
+    .chem-table tbody td:last-child {
+      justify-content: flex-end;
+      padding-top: 10px;
+    }
+    .equip-table tbody td:last-child::before,
+    .chem-table tbody td:last-child::before { display: none; }
+
+    /* Sticky column reset on mobile */
+    thead th:last-child, tbody td:last-child {
+      position: static !important;
+      box-shadow: none !important;
+      border-left: none !important;
+    }
+
+    /* Toolbar stacks on mobile */
+    .toolbar { flex-direction: column; gap: 8px; }
+    .toolbar .search-box { width: 100%; }
+    .toolbar .filter-select { width: 100%; }
+    .page-header { flex-direction: column; gap: 12px; align-items: flex-start; }
+    .page-header > div:last-child { width: 100%; }
+    .page-header .btn-add { width: 100%; text-align: center; }
+  }
+
+  /* ── MEDIUM SCREENS (tablets) ── */
+  @media (min-width: 769px) and (max-width: 1100px) {
+    #page-equipment, #page-chemistry { padding: 16px; }
+    .table-wrap { overflow-x: auto; scrollbar-width: thin; scrollbar-color: var(--accent) var(--border); }
+    .table-wrap::-webkit-scrollbar { height: 5px; }
+    .table-wrap::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 4px; }
+    table { min-width: 860px; }
+  }
+
+
+  /* ── Universal attachments field ── */
+  .attach-field {
+    border:2px dashed var(--border); border-radius:10px; padding:14px;
+    transition:border-color 0.15s;
+  }
+  .attach-field.dragover { border-color:var(--accent); background:var(--accent-light); }
+  .attach-field-buttons {
+    display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;
+  }
+  .attach-btn {
+    padding:7px 14px; border:1px solid var(--border); border-radius:8px;
+    background:var(--surface); color:var(--text); cursor:pointer; font-size:13px;
+    font-family:inherit; display:inline-flex; align-items:center; gap:6px;
+    transition:all 0.15s;
+  }
+  .attach-btn:hover { border-color:var(--accent); color:var(--accent); }
+  .attach-link-input-row {
+    display:none; gap:6px; align-items:center; margin-bottom:8px;
+  }
+  .attach-link-input-row.open { display:flex; }
+  .attach-link-input-row input {
+    flex:1; padding:7px 10px; border:1px solid var(--border); border-radius:6px;
+    font-size:13px; font-family:inherit;
+  }
+  .attach-link-input-row .add-link-btn {
+    padding:7px 12px; background:var(--accent); color:#fff;
+    border:none; border-radius:6px; font-size:12px; cursor:pointer; font-family:inherit;
+  }
+  .attach-list { display:flex; flex-direction:column; gap:5px; }
+  .attach-item {
+    display:flex; align-items:center; gap:8px;
+    background:var(--bg); border:1px solid var(--border); border-radius:6px;
+    padding:6px 10px; font-size:12px;
+  }
+  .attach-item-icon { font-size:16px; flex-shrink:0; }
+  .attach-item-name {
+    flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .attach-item-name a { color:var(--text); text-decoration:none; }
+  .attach-item-name a:hover { color:var(--accent); text-decoration:underline; }
+  .attach-item-size { color:var(--muted); flex-shrink:0; font-size:11px; }
+  .attach-item-remove {
+    background:none; border:none; cursor:pointer; color:var(--muted);
+    font-size:16px; line-height:1; padding:0 2px;
+  }
+  .attach-item-remove:hover { color:var(--danger); }
+  .attach-hint { font-size:11px; color:var(--muted); text-align:center; }
+
 </style>
   <!-- Firebase SDK -->
   <script type="module">
@@ -1735,6 +1945,7 @@
           <input type="date" id="if-purchase-date"/></div>
         <div class="form-field full"><label>Notes</label>
           <textarea id="if-notes" placeholder="General notes about this instrument..."></textarea></div>
+        <div class="form-field full" id="if-attach-slot"></div>
       </div>
     </div>
     <div class="modal-footer">
@@ -2108,7 +2319,7 @@
   <div class="page" id="page-documents">
     <div class="page-header">
       <div><h2>📚 Document Library</h2><p>Lab protocols, SOPs, safety docs, and onboarding materials.</p></div>
-      <button class="btn-add admin-only-btn" id="doc-add-btn" onclick="openDocModal(null)" style="display:none;">＋ Add Document</button>
+      <button class="btn-add" id="doc-add-btn" onclick="openDocModal(null)">＋ Add Document</button>
     </div>
     <div class="toolbar" style="margin-bottom:20px;">
       <div class="search-box"><span class="search-icon">🔍</span>
@@ -2407,6 +2618,7 @@
           <label>Project Notes</label>
           <textarea id="pf-notes" placeholder="Sample details, methodology, collaborators, storage notes&#x2026;" style="min-height:120px;"></textarea>
         </div>
+        <div class="form-field full" id="pf-attach-slot"></div>
       </div>
     </div>
     <div class="modal-footer">
@@ -2475,6 +2687,7 @@
           <label>Details / Notes</label>
           <textarea id="ef-details" placeholder="Any additional notes, conditions…"></textarea>
         </div>
+        <div class="form-field full" id="ef-attach-slot"></div>
       </div>
     </div>
     <div class="modal-footer">
@@ -2578,6 +2791,7 @@
           <label>Details / Notes</label>
           <textarea id="cf-details" placeholder="Concentration, lot number, purchase date, handling notes…"></textarea>
         </div>
+        <div class="form-field full" id="cf-attach-slot"></div>
 
         <div class="form-section-label">Safety Information</div>
         <div class="form-field full" style="margin-top:0;">
@@ -2726,11 +2940,11 @@ function switchTab(tab) {
   if(tabEl) tabEl.classList.add('active');
   const pageEl=document.getElementById('page-'+tab);
   if(pageEl) pageEl.classList.add('active');
-  if(tab==='equipment') renderEquipTable();
-  if(tab==='chemistry') renderChemTable();
+  if(tab==='equipment') { renderEquipTable(); setTimeout(setupTableTopScrollbars, 50); }
+  if(tab==='chemistry') { renderChemTable(); setTimeout(setupTableTopScrollbars, 50); }
   if(tab==='projects') renderProjects();
   if(tab==='instruments'){renderInstList();renderInstAlertBanner();}
-  if(tab==='highvalue') { if(typeof renderHVTable==='function') renderHVTable(); }
+  if(tab==='highvalue') { if(typeof renderHVTable==='function') renderHVTable(); setTimeout(setupTableTopScrollbars, 50); }
   if(tab==='members') { if(typeof renderMembers==='function') renderMembers(); }
   if(tab==='documents') { if(typeof renderDocLibrary==='function') renderDocLibrary(); }
   if(tab==='samples') { if(typeof renderSamples==='function') renderSamples(); }
@@ -2770,21 +2984,32 @@ function renderEquipTable() {
   empty.style.display='none';
   tbody.innerHTML=filtered.map(e=>`
     <tr>
-      <td><div class="equip-name">${esc(e.name)}</div>${e.model?`<div class="equip-model">${esc(e.model)}</div>`:''}</td>
-      <td>${esc(e.company||'—')}</td>
-      <td>${e.serial?`<span style="font-family:'DM Mono',monospace;font-size:12px;">${esc(e.serial)}</span>`:'<span style="color:var(--muted)">—</span>'}</td>
-      <td>${e.category?`<span class="category-tag">${esc(e.category)}</span>`:'—'}</td>
-      <td><span class="qty-badge">${e.qty}</span>${e.minQty>0&&e.qty<=e.minQty?'<div style="font-size:10px;color:var(--danger);font-weight:600;margin-top:2px;">⚠ Low Stock</div>':''}</td>
-      <td><span class="status-badge ${getStatusClass(e.status)}"><span class="dot"></span>${esc(e.status)}</span></td>
-      <td>${(()=>{const co=checkouts[e.id];if(co)return '<span class="checkout-badge checked-out">📤 '+esc(co.by)+'</span><br><button class="btn-checkout checkin" onclick="toggleCheckout(\'' +e.id+ '\')">Check In</button>';return '<button class="btn-checkout" onclick="toggleCheckout(\'' +e.id+ '\')">Check Out</button>';})()}</td>
-      <td><div>${esc(e.location||'—')}</div>${e.locationDetail?`<div class="meta-text">${esc(e.locationDetail)}</div>`:''}</td>
-      <td><div class="meta-text">${esc(e.lastEditedBy||'—')}</div><div class="meta-text">${fmtDate(e.lastEditedDate)}</div></td>
-      <td><div class="actions">
-        <button class="btn-icon" onclick="openEquipViewModal('${e.id}')" title="View">👁</button>
-        <button class="btn-icon" onclick="openEditEquipModal('${e.id}')" title="Edit">✏️</button>
-        <button class="btn-icon danger" onclick="deleteEquipment('${e.id}')" title="Delete">🗑</button>
+      <td data-label="Equipment"><div class="equip-name">${esc(e.name)}</div>${e.model?`<div class="equip-model">${esc(e.model)}</div>`:''}</td>
+      <td data-label="Company / Make">${esc(e.company||'—')}</td>
+      <td data-label="Serial No.">${e.serial?`<span style="font-family:'DM Mono',monospace;font-size:12px;">${esc(e.serial)}</span>`:'<span style="color:var(--muted)">—</span>'}</td>
+      <td data-label="Category">${e.category?`<span class="category-tag">${esc(e.category)}</span>`:'—'}</td>
+      <td data-label="Qty"><span class="qty-badge">${e.qty}</span>${e.minQty>0&&e.qty<=e.minQty?'<div style="font-size:10px;color:var(--danger);font-weight:600;margin-top:2px;">⚠ Low Stock</div>':''}</td>
+      <td data-label="Status"><span class="status-badge ${getStatusClass(e.status)}"><span class="dot"></span>${esc(e.status)}</span></td>
+      <td data-label="Checkout">${(()=>{const co=checkouts[e.id];if(co)return '<span class="checkout-badge checked-out">📤 '+esc(co.by)+'</span><br><button class="btn-checkout checkin" onclick="toggleCheckout(\'' +e.id+ '\')">Check In</button>';return '<button class="btn-checkout" onclick="toggleCheckout(\'' +e.id+ '\')">Check Out</button>';})()}</td>
+      <td data-label="Location"><div>${esc(e.location||'—')}</div>${e.locationDetail?`<div class="meta-text">${esc(e.locationDetail)}</div>`:''}</td>
+      <td data-label="Last Edited"><div class="meta-text">${esc(e.lastEditedBy||'—')}</div><div class="meta-text">${fmtDate(e.lastEditedDate)}</div></td>
+      <td style="white-space:nowrap;min-width:116px;"><div class="actions">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
+          <button class="btn-icon" onclick="openEquipViewModal('${e.id}')" title="View details">👁</button>
+          <span style="font-size:9px;color:var(--muted);">View</span>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
+          <button class="btn-icon" onclick="openEditEquipModal('${e.id}')" title="Edit item">✏️</button>
+          <span style="font-size:9px;color:var(--muted);">Edit</span>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
+          <button class="btn-icon danger" onclick="deleteEquipment('${e.id}')" title="Delete item">🗑</button>
+          <span style="font-size:9px;color:var(--danger);font-weight:600;">Delete</span>
+        </div>
       </div></td>
     </tr>`).join('');
+  // Refresh top scrollbar width to match new table content
+  if (typeof setupTableTopScrollbars === 'function') setTimeout(setupTableTopScrollbars, 10);
 }
 
 function openAddEquipModal(){
@@ -2794,6 +3019,8 @@ function openAddEquipModal(){
   document.getElementById('ef-qty').value=1;
   document.getElementById('ef-minqty').value='';
   document.getElementById('ef-status').value='Available';
+  document.getElementById('ef-attach-slot').innerHTML=attachmentFieldHTML('equipment');
+  initAttachBuffer('equipment', []);
   document.getElementById('equip-modal-overlay').classList.add('open');
 }
 function openEditEquipModal(id){
@@ -2811,6 +3038,8 @@ function openEditEquipModal(id){
   document.getElementById('ef-location').value=item.location||'';
   document.getElementById('ef-location-detail').value=item.locationDetail||'';
   document.getElementById('ef-details').value=item.details||'';
+  document.getElementById('ef-attach-slot').innerHTML=attachmentFieldHTML('equipment');
+  initAttachBuffer('equipment', item.attachments||[]);
   closeEquipViewModal();
   document.getElementById('equip-modal-overlay').classList.add('open');
 }
@@ -2829,6 +3058,7 @@ function saveEquipment(){
     category,
     qty:parseInt(document.getElementById('ef-qty').value)||1,
     minQty:parseInt(document.getElementById('ef-minqty').value)||0,
+    attachments: getAttachBuffer('equipment'),
     status:document.getElementById('ef-status').value,
     location:document.getElementById('ef-location').value.trim(),
     locationDetail:document.getElementById('ef-location-detail').value.trim(),
@@ -2866,7 +3096,8 @@ function openEquipViewModal(id){
     <div class="detail-item full"><div class="label">Details / Notes</div><div class="value">${esc(item.details||'—')}</div></div>
     <div class="detail-item"><div class="label">Last Edited By</div><div class="value">${esc(item.lastEditedBy||'—')}</div></div>
     <div class="detail-item"><div class="label">Last Edited Date</div><div class="value">${fmtDate(item.lastEditedDate)}</div></div>
-    <div class="detail-item"><div class="label">Date Added</div><div class="value">${fmtDate(item.createdDate)}</div></div>`;
+    <div class="detail-item"><div class="label">Date Added</div><div class="value">${fmtDate(item.createdDate)}</div></div>
+    ${item.attachments && item.attachments.length ? `<div class="detail-item full"><div class="label">Attachments</div><div class="value">${attachmentsDisplay(item.attachments)}</div></div>` : ''}`;
   document.getElementById('equip-view-edit-btn').onclick=()=>openEditEquipModal(id);
   document.getElementById('equip-view-overlay').classList.add('open');
 }
@@ -2929,30 +3160,43 @@ function renderChemTable(){
     else if(c.safetyType==='pdf'&&c.safetyFile) safetyHtml=`<a href="${c.safetyFile.dataUrl}" download="${esc(c.safetyFile.name)}" class="safety-link">📄 Download PDF</a>`;
     else if(c.name) { const q=encodeURIComponent(c.name); safetyHtml=`<a href="https://pubchem.ncbi.nlm.nih.gov/compound/${q}" target="_blank" class="safety-link" style="color:var(--muted);font-size:11px;" title="Search PubChem">🔍 PubChem</a>`; }
     return `<tr>
-      <td>
+      <td data-label="Chemical">
         <div class="equip-name">${esc(c.name)}</div>
         ${c.amount>0?`<div style="font-size:11px;color:var(--muted);margin-top:2px;">${c.amount} ${esc(c.amountUnit||'')}${c.minAmount>0&&c.amount<=c.minAmount?'<span style="color:var(--danger);font-weight:600;margin-left:6px;">⚠ Low Stock</span>':''}</div>`:''}
       </td>
-      <td>${c.formula?`<span style="font-family:'DM Mono',monospace;font-size:13px;">${esc(c.formula)}</span>`:'—'}</td>
-      <td>${c.type?`<span class="category-tag">${esc(c.type)}</span>`:'—'}</td>
-      <td><span style="font-size:13px;">${esc(c.storage||'—')}</span></td>
-      <td><span style="font-size:13px;">${esc(c.location||'—')}</span></td>
-      <td>${expiryHtml}</td>
-      <td>${safetyHtml}</td>
-      <td><div class="meta-text">${esc(c.lastEditedBy||'—')}</div><div class="meta-text">${fmtDate(c.lastEditedDate)}</div></td>
-      <td><div class="actions">
-        <button class="btn-icon" onclick="openChemViewModal('${c.id}')" title="View">👁</button>
-        <button class="btn-icon" onclick="openEditChemModal('${c.id}')" title="Edit">✏️</button>
-        <button class="btn-icon danger" onclick="deleteChem('${c.id}')" title="Delete">🗑</button>
+      <td data-label="Formula">${c.formula?`<span style="font-family:'DM Mono',monospace;font-size:13px;">${esc(c.formula)}</span>`:'—'}</td>
+      <td data-label="Type">${c.type?`<span class="category-tag">${esc(c.type)}</span>`:'—'}</td>
+      <td data-label="Storage"><span style="font-size:13px;">${esc(c.storage||'—')}</span></td>
+      <td data-label="Location"><span style="font-size:13px;">${esc(c.location||'—')}</span></td>
+      <td data-label="Expiry">${expiryHtml}</td>
+      <td data-label="Safety">${safetyHtml}</td>
+      <td data-label="Last Edited"><div class="meta-text">${esc(c.lastEditedBy||'—')}</div><div class="meta-text">${fmtDate(c.lastEditedDate)}</div></td>
+      <td style="white-space:nowrap;min-width:116px;"><div class="actions">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
+          <button class="btn-icon" onclick="openChemViewModal('${c.id}')" title="View details">👁</button>
+          <span style="font-size:9px;color:var(--muted);">View</span>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
+          <button class="btn-icon" onclick="openEditChemModal('${c.id}')" title="Edit item">✏️</button>
+          <span style="font-size:9px;color:var(--muted);">Edit</span>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
+          <button class="btn-icon danger" onclick="deleteChem('${c.id}')" title="Delete item">🗑</button>
+          <span style="font-size:9px;color:var(--danger);font-weight:600;">Delete</span>
+        </div>
       </div></td>
     </tr>`;
   }).join('');
+  // Refresh top scrollbar width to match new table content
+  if (typeof setupTableTopScrollbars === 'function') setTimeout(setupTableTopScrollbars, 10);
 }
 
 function openAddChemModal(){
   editingChemId=null; pendingFileData=null;
   document.getElementById('chem-modal-title').textContent='Add Chemical';
   ['cf-name','cf-formula','cf-location','cf-details','cf-safety-link','cf-amount','cf-minamount'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('cf-attach-slot').innerHTML=attachmentFieldHTML('chemistry');
+  initAttachBuffer('chemistry', []);
   document.getElementById('cf-amount-unit').value='ml';
   document.getElementById('cf-minamount-unit-display').textContent='—';
   document.getElementById('cf-type').value='';
@@ -2978,6 +3222,8 @@ function openEditChemModal(id){
   document.getElementById('cf-minamount').value=item.minAmount||'';
   document.getElementById('cf-minamount-unit-display').textContent=item.amountUnit||'—';
   document.getElementById('cf-details').value=item.details||'';
+  document.getElementById('cf-attach-slot').innerHTML=attachmentFieldHTML('chemistry');
+  initAttachBuffer('chemistry', item.attachments||[]);
   document.getElementById('cf-safety-link').value=item.safetyLink||'';
   const mode=item.safetyType||'none';
   setSafetyMode(mode);
@@ -3011,6 +3257,7 @@ function saveChemical(){
     amountUnit,
     minAmount:parseFloat(document.getElementById('cf-minamount').value)||0,
     details:document.getElementById('cf-details').value.trim(),
+    attachments: getAttachBuffer('chemistry'),
     safetyType, safetyLink, safetyFile,
     lastEditedBy:currentUser.name||currentUser.email,
     lastEditedDate:now,
@@ -3049,7 +3296,8 @@ function openChemViewModal(id){
     <div class="detail-item full"><div class="label">Details / Notes</div><div class="value">${esc(item.details||'—')}</div></div>
     <div class="detail-item"><div class="label">Last Edited By</div><div class="value">${esc(item.lastEditedBy||'—')}</div></div>
     <div class="detail-item"><div class="label">Last Edited Date</div><div class="value">${fmtDate(item.lastEditedDate)}</div></div>
-    <div class="detail-item"><div class="label">Date Added</div><div class="value">${fmtDate(item.createdDate)}</div></div>`;
+    <div class="detail-item"><div class="label">Date Added</div><div class="value">${fmtDate(item.createdDate)}</div></div>
+    ${item.attachments && item.attachments.length ? `<div class="detail-item full"><div class="label">Attachments</div><div class="value">${attachmentsDisplay(item.attachments)}</div></div>` : ''}`;
   document.getElementById('chem-view-edit-btn').onclick=()=>openEditChemModal(id);
   document.getElementById('chem-view-overlay').classList.add('open');
 }
@@ -3238,6 +3486,11 @@ function selectProject(id) {
       <div class="proj-notes-box">${esc(p.notes)}</div>
     </div>` : ''}
 
+    ${p.attachments && p.attachments.length ? `<div class="proj-detail-section">
+      <div class="proj-detail-section-title">Attachments</div>
+      ${attachmentsDisplay(p.attachments)}
+    </div>` : ''}
+
     <div class="proj-edit-meta">
       <span>Last edited by ${esc(p.lastEditedBy||'—')}</span>
       <span>${fmtDate(p.lastEditedDate)}</span>
@@ -3250,6 +3503,8 @@ function openAddProjModal() {
   ['pf-name','pf-owner','pf-owner-email','pf-location','pf-folder','pf-notes'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('pf-status').value = 'Ongoing';
   document.getElementById('pf-enddate').value = '';
+  document.getElementById('pf-attach-slot').innerHTML = attachmentFieldHTML('project');
+  initAttachBuffer('project', []);
   document.getElementById('proj-modal-overlay').classList.add('open');
 }
 
@@ -3265,6 +3520,8 @@ function openEditProjModal(id) {
   document.getElementById('pf-enddate').value = p.endDate || '';
   document.getElementById('pf-folder').value = p.folder || '';
   document.getElementById('pf-notes').value = p.notes || '';
+  document.getElementById('pf-attach-slot').innerHTML = attachmentFieldHTML('project');
+  initAttachBuffer('project', p.attachments || []);
   document.getElementById('proj-modal-overlay').classList.add('open');
 }
 
@@ -3283,6 +3540,7 @@ function saveProject() {
     endDate: document.getElementById('pf-enddate').value || '',
     folder: document.getElementById('pf-folder').value.trim(),
     notes: document.getElementById('pf-notes').value.trim(),
+    attachments: getAttachBuffer('project'),
     lastEditedBy: currentUser.name || currentUser.email,
     lastEditedDate: now,
   };
@@ -3508,6 +3766,7 @@ function renderInstSidebar(inst) {
         return maintHtml;
       })()}
       ${inst.notes?`<div class="inst-detail-item full"><div class="label">Notes</div><div class="value proj-notes-box">${esc(inst.notes)}</div></div>`:''}
+      ${inst.modalAttachments && inst.modalAttachments.length ? `<div class="inst-detail-item full"><div class="label">Manuals, Datasheets &amp; Links</div><div class="value">${attachmentsDisplay(inst.modalAttachments)}</div></div>` : ''}
     </div>
   </div>
   <div id="inst-panel-sop" class="inst-sidebar-panel${activeInstSidebarTab==='sop'?' active':''}">
@@ -3587,6 +3846,8 @@ function openAddInstModal() {
   document.getElementById('if-status').value='Available';
   document.getElementById('if-training-req').value='Yes';
   document.getElementById('if-purchase-date').value='';
+  document.getElementById('if-attach-slot').innerHTML=attachmentFieldHTML('instrument','Manuals, Datasheets & Links');
+  initAttachBuffer('instrument', []);
   document.getElementById('inst-modal-overlay').classList.add('open');
 }
 function openEditInstModal(id) {
@@ -3603,6 +3864,8 @@ function openEditInstModal(id) {
   document.getElementById('if-training-req').value=inst.trainingRequired||'Yes';
   document.getElementById('if-purchase-date').value=inst.purchaseDate||'';
   document.getElementById('if-notes').value=inst.notes||'';
+  document.getElementById('if-attach-slot').innerHTML=attachmentFieldHTML('instrument','Manuals, Datasheets & Links');
+  initAttachBuffer('instrument', inst.modalAttachments||[]);
   document.getElementById('inst-modal-overlay').classList.add('open');
 }
 function closeInstModal() { document.getElementById('inst-modal-overlay').classList.remove('open'); }
@@ -3620,6 +3883,7 @@ function saveInstrument() {
     trainingRequired:document.getElementById('if-training-req').value,
     purchaseDate:document.getElementById('if-purchase-date').value,
     notes:document.getElementById('if-notes').value.trim(),
+    modalAttachments:getAttachBuffer('instrument'),
     lastEditedBy:currentUser.name||currentUser.email,
     lastEditedDate:now,
   };
@@ -4955,17 +5219,43 @@ let editingDocId = null;
 const DOC_ICONS = { SOP:'📋', Safety:'⚠️', Protocol:'🔬', Onboarding:'🎓', Other:'📄' };
 function openDocModal(id) {
   editingDocId = id;
-  ['doc-name-input','doc-desc-input','doc-link-input'].forEach(f => document.getElementById(f).value='');
+  ['doc-name-input','doc-desc-input'].forEach(f => document.getElementById(f).value='');
   document.getElementById('doc-cat-input').value = 'SOP';
   document.getElementById('doc-modal-title').textContent = id ? 'Edit Document' : 'Add Document';
-  if (id) { const d = docLibrary.find(x => x.id===id); if(d){ document.getElementById('doc-name-input').value=d.name||''; document.getElementById('doc-desc-input').value=d.desc||''; document.getElementById('doc-link-input').value=d.link||''; document.getElementById('doc-cat-input').value=d.cat||'SOP'; } }
+  let existingAttach = [];
+  if (id) {
+    const d = docLibrary.find(x => x.id===id);
+    if(d){
+      document.getElementById('doc-name-input').value=d.name||'';
+      document.getElementById('doc-desc-input').value=d.desc||'';
+      document.getElementById('doc-cat-input').value=d.cat||'SOP';
+      existingAttach = (d.attachments || []).slice();
+      // Migrate legacy single-link field into attachments if present and not already there
+      if (d.link && !existingAttach.find(a => a.kind === 'link' && a.url === d.link)) {
+        existingAttach.push({ id: uid(), kind: 'link', name: d.link, url: d.link });
+      }
+    }
+  }
+  document.getElementById('doc-attach-slot').innerHTML = attachmentFieldHTML('document');
+  initAttachBuffer('document', existingAttach);
   document.getElementById('doc-modal-overlay').classList.add('open');
 }
 function closeDocModal() { document.getElementById('doc-modal-overlay').classList.remove('open'); }
 function saveDoc() {
   const name = document.getElementById('doc-name-input').value.trim();
   if (!name) { alert('Please enter a document name.'); return; }
-  const obj = { name, cat: document.getElementById('doc-cat-input').value, desc: document.getElementById('doc-desc-input').value.trim(), link: document.getElementById('doc-link-input').value.trim(), addedBy: currentUser.name||currentUser.email, ts: new Date().toISOString() };
+  const attachments = getAttachBuffer('document');
+  // Backwards-compat: store first link in legacy `link` field
+  const firstLink = attachments.find(a => a.kind === 'link');
+  const obj = {
+    name,
+    cat: document.getElementById('doc-cat-input').value,
+    desc: document.getElementById('doc-desc-input').value.trim(),
+    link: firstLink ? firstLink.url : '',
+    attachments,
+    addedBy: currentUser.name||currentUser.email,
+    ts: new Date().toISOString()
+  };
   if (editingDocId) { const idx=docLibrary.findIndex(d=>d.id===editingDocId); docLibrary[idx]={...docLibrary[idx],...obj}; }
   else { docLibrary.push({id:uid(),...obj}); }
   saveDocLibrary(); closeDocModal(); renderDocLibrary();
@@ -4991,8 +5281,17 @@ function renderDocLibrary() {
         ${d.desc?`<div class="doc-desc">${esc(d.desc)}</div>`:''}
         <div class="doc-meta">Added by ${esc(d.addedBy||'Admin')} · ${fmtDate(d.ts)}</div>
         <div class="doc-actions">
-          ${d.link?`<a href="${esc(d.link)}" target="_blank" class="btn-secondary" style="padding:4px 10px;font-size:12px;text-decoration:none;">🔗 Open</a>`:''}
-          ${isAdmin?`<button class="btn-icon" onclick="openDocModal('${d.id}')" title="Edit">✏️</button><button class="btn-icon danger" onclick="deleteDoc('${d.id}')" title="Delete">🗑</button>`:''}
+          ${(()=>{
+            const atts = (d.attachments && d.attachments.length) ? d.attachments : (d.link?[{kind:'link',name:d.link,url:d.link}]:[]);
+            return atts.map(a => {
+              const icon = (typeof attachIcon==='function') ? attachIcon(a) : '🔗';
+              const href = a.kind==='link' ? esc(a.url) : a.dataUrl;
+              const dl = a.kind==='link' ? '' : ` download="${esc(a.name)}"`;
+              const target = a.kind==='link' ? ' target="_blank"' : '';
+              return `<a href="${href}"${target}${dl} class="btn-secondary" style="padding:4px 10px;font-size:12px;text-decoration:none;display:inline-flex;align-items:center;gap:4px;">${icon} ${esc(a.name.length>28?a.name.slice(0,28)+'…':a.name)}</a>`;
+            }).join('');
+          })()}
+          ${`<button class="btn-icon" onclick="openDocModal('${d.id}')" title="Edit">✏️</button><button class="btn-icon danger" onclick="deleteDoc('${d.id}')" title="Delete">🗑</button>`}
         </div>
       </div>
     </div>`).join('');
@@ -5248,6 +5547,7 @@ function openSampleModal(id) {
   ['sm-name','sm-owner','sm-project','sm-location','sm-retention','sm-prepdate','sm-notes'].forEach(f => document.getElementById(f).value = '');
   document.getElementById('sm-status').value = 'Active';
   document.getElementById('sample-modal-title').textContent = id ? 'Edit Sample' : 'Add Sample';
+  let existingAttach = [];
   if (id) {
     const s = samples.find(x => x.id === id);
     if (s) {
@@ -5259,8 +5559,11 @@ function openSampleModal(id) {
       document.getElementById('sm-prepdate').value = s.prepDate||'';
       document.getElementById('sm-notes').value = s.notes||'';
       document.getElementById('sm-status').value = s.status||'Active';
+      existingAttach = s.attachments || [];
     }
   }
+  document.getElementById('sm-attach-slot').innerHTML = attachmentFieldHTML('sample');
+  initAttachBuffer('sample', existingAttach);
   document.getElementById('sample-modal-overlay').classList.add('open');
 }
 function closeSampleModal() { document.getElementById('sample-modal-overlay').classList.remove('open'); }
@@ -5276,6 +5579,7 @@ function saveSample() {
     prepDate: document.getElementById('sm-prepdate').value,
     notes: document.getElementById('sm-notes').value.trim(),
     status: document.getElementById('sm-status').value,
+    attachments: getAttachBuffer('sample'),
     lastEditedBy: currentUser.name||currentUser.email,
     lastEditedDate: new Date().toISOString(),
   };
@@ -5348,6 +5652,7 @@ function renderSamples() {
       </div>
       ${retLabel ? `<div style="margin-top:8px;font-size:12px;">${retLabel}</div>` : ''}
       ${s.notes?`<div style="margin-top:8px;font-size:12px;color:var(--muted);line-height:1.5;">${esc(s.notes)}</div>`:''}
+      ${s.attachments && s.attachments.length ? `<div style="margin-top:8px;">${attachmentsDisplay(s.attachments)}</div>` : ''}
       <div style="display:flex;gap:6px;margin-top:10px;">
         <button class="btn-icon" onclick="openSampleModal('${s.id}')" title="Edit">✏️</button>
         <button class="btn-icon danger" onclick="deleteSample('${s.id}')" title="Delete">🗑</button>
@@ -5932,6 +6237,239 @@ function renderTabVisibilityList() {
       </label>
     </div>`;
   }).join('');
+}
+
+
+// ── TABLE TOP SCROLLBAR ──
+// Adds a second horizontal scrollbar at the top of each main table-wrap
+// so users can scroll horizontally without scrolling to the bottom of the table
+function setupTableTopScrollbars() {
+  const pages = ['page-equipment', 'page-chemistry', 'page-highvalue'];
+  pages.forEach(pageId => {
+    const page = document.getElementById(pageId);
+    if (!page) return;
+    const wrap = page.querySelector('.table-wrap');
+    if (!wrap) return;
+
+    let topScroll = wrap.previousElementSibling;
+    let filler;
+    if (!topScroll || !topScroll.classList.contains('table-top-scroll')) {
+      // Create top scroll element
+      topScroll = document.createElement('div');
+      topScroll.className = 'table-top-scroll';
+      filler = document.createElement('div');
+      topScroll.appendChild(filler);
+      wrap.parentNode.insertBefore(topScroll, wrap);
+
+      // Two-way scroll sync
+      let syncingTop = false, syncingBot = false;
+      topScroll.addEventListener('scroll', () => {
+        if (syncingBot) { syncingBot = false; return; }
+        syncingTop = true;
+        wrap.scrollLeft = topScroll.scrollLeft;
+      });
+      wrap.addEventListener('scroll', () => {
+        if (syncingTop) { syncingTop = false; return; }
+        syncingBot = true;
+        topScroll.scrollLeft = wrap.scrollLeft;
+      });
+
+      // Auto-resize on window resize
+      window.addEventListener('resize', () => {
+        const table = wrap.querySelector('table');
+        if (table && filler) filler.style.width = table.scrollWidth + 'px';
+      });
+    } else {
+      filler = topScroll.firstElementChild;
+    }
+
+    // Sync widths every call (handles re-renders, filter changes)
+    const table = wrap.querySelector('table');
+    if (table && filler) filler.style.width = table.scrollWidth + 'px';
+
+    // Hide top scrollbar if table fits without scrolling
+    if (table && table.scrollWidth <= wrap.clientWidth) {
+      topScroll.style.display = 'none';
+    } else {
+      topScroll.style.display = 'block';
+    }
+  });
+}
+
+
+// ══════════════════════════════════════════════════════════════
+// UNIVERSAL ATTACHMENTS SYSTEM
+// Used by: Equipment, Chemicals, Projects, Samples, Documents
+// Stores files as base64 in the item's `attachments` array,
+// and links as plain URLs.
+// ══════════════════════════════════════════════════════════════
+
+// Track pending attachments per modal context
+const _attachBuffers = {};
+
+const ATTACH_ACCEPT = ".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.ppt,.pptx,.jpg,.jpeg,.png,.gif,.webp,.svg,.zip,.json,.md";
+const ATTACH_MAX_MB = 15;
+
+function attachmentFieldHTML(context, label = 'Files & Links') {
+  return `
+    <div class="form-field full">
+      <label>${esc(label)} <span style="color:var(--muted);font-weight:400;font-size:12px;">(PDF, Word, Excel, images, links — up to ${ATTACH_MAX_MB}MB each)</span></label>
+      <div class="attach-field" id="attach-${context}-field"
+           ondragover="event.preventDefault();this.classList.add('dragover');"
+           ondragleave="this.classList.remove('dragover');"
+           ondrop="handleAttachDrop('${context}',event)">
+        <div class="attach-field-buttons">
+          <button type="button" class="attach-btn" onclick="document.getElementById('attach-${context}-fileinput').click()">📎 Add File</button>
+          <button type="button" class="attach-btn" onclick="toggleAttachLinkInput('${context}')">🔗 Add Link</button>
+        </div>
+        <input type="file" id="attach-${context}-fileinput" multiple accept="${ATTACH_ACCEPT}" style="display:none;" onchange="handleAttachFileSelect('${context}',event)"/>
+        <div class="attach-link-input-row" id="attach-${context}-linkrow">
+          <input type="url" id="attach-${context}-linkinput" placeholder="https://example.com/document"/>
+          <button type="button" class="add-link-btn" onclick="addAttachLink('${context}')">Add</button>
+        </div>
+        <div class="attach-list" id="attach-${context}-list"></div>
+        <div class="attach-hint" id="attach-${context}-hint" style="display:none;">Drag files here or use the buttons above</div>
+      </div>
+    </div>`;
+}
+
+function initAttachBuffer(context, existing) {
+  _attachBuffers[context] = existing ? existing.map(a => ({...a})) : [];
+  renderAttachBuffer(context);
+  // Reset link input
+  const lr = document.getElementById('attach-' + context + '-linkrow');
+  if (lr) lr.classList.remove('open');
+  const li = document.getElementById('attach-' + context + '-linkinput');
+  if (li) li.value = '';
+}
+
+function getAttachBuffer(context) {
+  return (_attachBuffers[context] || []).slice();
+}
+
+function handleAttachFileSelect(context, e) {
+  Array.from(e.target.files).forEach(file => readAttachFile(context, file));
+  e.target.value = '';
+}
+function handleAttachDrop(context, e) {
+  e.preventDefault();
+  document.getElementById('attach-' + context + '-field').classList.remove('dragover');
+  Array.from(e.dataTransfer.files).forEach(file => readAttachFile(context, file));
+}
+function readAttachFile(context, file) {
+  if (file.size > ATTACH_MAX_MB * 1024 * 1024) {
+    alert(file.name + ' is too large (max ' + ATTACH_MAX_MB + 'MB).');
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = ev => {
+    if (!_attachBuffers[context]) _attachBuffers[context] = [];
+    _attachBuffers[context].push({
+      id: uid(),
+      kind: 'file',
+      name: file.name,
+      dataUrl: ev.target.result,
+      mimeType: file.type,
+      size: file.size,
+    });
+    renderAttachBuffer(context);
+  };
+  reader.readAsDataURL(file);
+}
+
+function toggleAttachLinkInput(context) {
+  const row = document.getElementById('attach-' + context + '-linkrow');
+  if (row) row.classList.toggle('open');
+  if (row && row.classList.contains('open')) {
+    document.getElementById('attach-' + context + '-linkinput').focus();
+  }
+}
+
+function addAttachLink(context) {
+  const input = document.getElementById('attach-' + context + '-linkinput');
+  let url = (input.value || '').trim();
+  if (!url) return;
+  // Auto-prefix with https:// if missing
+  if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+  if (!_attachBuffers[context]) _attachBuffers[context] = [];
+  _attachBuffers[context].push({
+    id: uid(),
+    kind: 'link',
+    name: url,
+    url: url,
+  });
+  input.value = '';
+  document.getElementById('attach-' + context + '-linkrow').classList.remove('open');
+  renderAttachBuffer(context);
+}
+
+function removeAttach(context, id) {
+  if (!_attachBuffers[context]) return;
+  _attachBuffers[context] = _attachBuffers[context].filter(a => a.id !== id);
+  renderAttachBuffer(context);
+}
+
+function renderAttachBuffer(context) {
+  const list = document.getElementById('attach-' + context + '-list');
+  if (!list) return;
+  const buf = _attachBuffers[context] || [];
+  if (!buf.length) { list.innerHTML = ''; return; }
+  list.innerHTML = buf.map(a => {
+    const icon = attachIcon(a);
+    if (a.kind === 'link') {
+      return `<div class="attach-item">
+        <span class="attach-item-icon">${icon}</span>
+        <span class="attach-item-name"><a href="${esc(a.url)}" target="_blank" rel="noopener">${esc(a.name)}</a></span>
+        <button type="button" class="attach-item-remove" onclick="removeAttach('${context}','${a.id}')" title="Remove">×</button>
+      </div>`;
+    }
+    const sizeKb = a.size ? (a.size < 1024*1024 ? Math.round(a.size/1024)+' KB' : (a.size/1024/1024).toFixed(1)+' MB') : '';
+    return `<div class="attach-item">
+      <span class="attach-item-icon">${icon}</span>
+      <span class="attach-item-name"><a href="${a.dataUrl}" download="${esc(a.name)}">${esc(a.name)}</a></span>
+      <span class="attach-item-size">${sizeKb}</span>
+      <button type="button" class="attach-item-remove" onclick="removeAttach('${context}','${a.id}')" title="Remove">×</button>
+    </div>`;
+  }).join('');
+}
+
+function attachIcon(a) {
+  if (a.kind === 'link') return '🔗';
+  const n = (a.name || '').toLowerCase();
+  if (a.mimeType && a.mimeType.startsWith('image/')) return '🖼️';
+  if (n.endsWith('.pdf')) return '📕';
+  if (n.endsWith('.doc') || n.endsWith('.docx')) return '📘';
+  if (n.endsWith('.xls') || n.endsWith('.xlsx') || n.endsWith('.csv')) return '📗';
+  if (n.endsWith('.ppt') || n.endsWith('.pptx')) return '📙';
+  if (n.endsWith('.zip')) return '🗜️';
+  if (n.endsWith('.txt') || n.endsWith('.md') || n.endsWith('.json')) return '📄';
+  return '📎';
+}
+
+// ── Inject attachment field into existing modals on first open ──
+function injectAttachField(context, modalBodySelector) {
+  const body = document.querySelector(modalBodySelector);
+  if (!body) return;
+  if (body.querySelector('#attach-' + context + '-field')) return; // already injected
+  const grid = body.querySelector('.form-grid');
+  if (!grid) return;
+  const wrapper = document.createElement('div');
+  wrapper.innerHTML = attachmentFieldHTML(context);
+  // Append the form-field full inside the grid
+  grid.appendChild(wrapper.firstElementChild);
+}
+
+// ── Read-only attachment list for display in detail/view modals ──
+function attachmentsDisplay(attachments) {
+  if (!attachments || !attachments.length) return '';
+  return '<div style="display:flex;flex-direction:column;gap:5px;margin-top:6px;">' +
+    attachments.map(a => {
+      const icon = attachIcon(a);
+      if (a.kind === 'link') {
+        return `<a href="${esc(a.url)}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;padding:5px 10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;font-size:12px;color:var(--text);text-decoration:none;">${icon} ${esc(a.name)}</a>`;
+      }
+      return `<a href="${a.dataUrl}" download="${esc(a.name)}" style="display:inline-flex;align-items:center;gap:6px;padding:5px 10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;font-size:12px;color:var(--text);text-decoration:none;">${icon} ${esc(a.name)}</a>`;
+    }).join('') + '</div>';
 }
 
 // ── INIT ──
@@ -6579,6 +7117,7 @@ renderNoticeBoard();
 renderLowStockDashboard();
 renderIssuesDashboard();
 applyTabVisibility();
+setTimeout(setupTableTopScrollbars, 200);
 } // end _origInit
 
 // ── Start the app ──
@@ -6660,8 +7199,7 @@ if (window._firebaseReady) {
           </select></div>
         <div class="form-field full"><label>Description</label>
           <textarea id="doc-desc-input" placeholder="Brief description..." style="min-height:60px;"></textarea></div>
-        <div class="form-field full"><label>Link (URL)</label>
-          <input type="url" id="doc-link-input" placeholder="https://..."/></div>
+        <div class="form-field full" id="doc-attach-slot"></div>
       </div>
     </div>
     <div class="modal-footer">
@@ -6757,6 +7295,7 @@ if (window._firebaseReady) {
           <input type="date" id="sm-prepdate"/></div>
         <div class="form-field full"><label>Notes / Composition</label>
           <textarea id="sm-notes" placeholder="Composition, preparation method, hazards..." style="min-height:70px;"></textarea></div>
+        <div class="form-field full" id="sm-attach-slot"></div>
       </div>
     </div>
     <div class="modal-footer">
