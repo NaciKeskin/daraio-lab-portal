@@ -2097,9 +2097,13 @@
     </div>
     <div class="modal-body">
       <div class="form-grid">
-        <div class="form-field full"><label>Member Name <span class="required">*</span></label>
+        <div class="form-field full">
+          <label>Trainee — Lab Member <span style="color:var(--muted);font-weight:400;">(select from registered members)</span></label>
+          <div id="tr-trainee-picker" class="linked-members-picker"></div>
+        </div>
+        <div class="form-field full"><label>Trainee Name <span class="required">*</span> <span style="color:var(--muted);font-weight:400;">(fallback if not a registered member)</span></label>
           <input type="text" id="tr-member" placeholder="e.g. Jane Smith"/></div>
-        <div class="form-field full"><label>Member Email</label>
+        <div class="form-field full"><label>Trainee Email</label>
           <input type="email" id="tr-email" placeholder="e.g. jsmith@caltech.edu"/></div>
 
         <!-- Initial trainee toggle -->
@@ -2118,8 +2122,12 @@
           <label id="tr-date-label">Date Trained <span class="required" id="tr-date-req">*</span></label>
           <input type="date" id="tr-date"/>
         </div>
+        <div class="form-field full">
+          <label>Trainer — Lab Member <span style="color:var(--muted);font-weight:400;">(select from registered members)</span></label>
+          <div id="tr-trainer-picker" class="linked-members-picker"></div>
+        </div>
         <div class="form-field" id="tr-trainer-wrap">
-          <label id="tr-trainer-label">Trained By <span class="required" id="tr-trainer-req">*</span></label>
+          <label id="tr-trainer-label">Trained By <span class="required" id="tr-trainer-req">*</span> <span style="color:var(--muted);font-weight:400;">(fallback)</span></label>
           <input type="text" id="tr-trainer" placeholder="Name of trainer or company"/>
         </div>
         <div class="form-field full"><label>Trainer Email</label>
@@ -3908,16 +3916,61 @@ function renderAttachList(inst) {
 
 function renderTrainingList(inst) {
   if(!inst.training||!inst.training.length) return '<p style="font-size:13px;color:var(--muted);">No training records yet.</p>';
-  return inst.training.map(t=>`
+  return inst.training.map(t=>{
+    // Trainee verification status
+    const traineeUser = t.memberId ? regUsers.find(r => r.id === t.memberId) : null;
+    const traineeVerified = !!traineeUser;
+    const traineeBadge = traineeVerified
+      ? `<span title="Verified registered member" style="background:#e8f4ec;color:var(--success);font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px;border:1px solid #b7e4c7;">&#x2713; Verified</span>`
+      : `<span title="Not linked to a registered member" style="background:#fef0e8;color:var(--warning);font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px;border:1px solid #fde4cf;">&#x26A0; Unverified</span>`;
+    // Trainer verification status (only shown if trainer field present and not initial-only)
+    const trainerUser = t.trainerId ? regUsers.find(r => r.id === t.trainerId) : null;
+    const trainerVerified = !!trainerUser;
+    const trainerBadge = t.trainer
+      ? (trainerVerified
+          ? `<span title="Verified trainer" style="background:#e8f4ec;color:var(--success);font-size:10px;font-weight:600;padding:1px 6px;border-radius:8px;margin-left:6px;">&#x2713;</span>`
+          : `<span title="Trainer not linked to a registered member" style="background:#fef0e8;color:var(--warning);font-size:10px;font-weight:600;padding:1px 6px;border-radius:8px;margin-left:6px;">&#x26A0;</span>`)
+      : '';
+    const displayName = traineeUser ? (traineeUser.name || traineeUser.email) : t.member;
+    const displayEmail = traineeUser ? traineeUser.email : t.email;
+    const displayAdmin = traineeUser && traineeUser.isAdmin;
+    return `
     <div class="training-entry">
       <div class="training-member" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-        <span>${esc(t.member)}${t.email?' <span style="font-weight:400;color:var(--muted);font-size:12px;">&lt;'+esc(t.email)+'&gt;</span>':''}</span>
+        <span>${displayAdmin?'<span style="color:#7c3aed;">&#x2605; </span>':''}${esc(displayName)}${displayEmail?' <span style="font-weight:400;color:var(--muted);font-size:12px;">&lt;'+esc(displayEmail)+'&gt;</span>':''}</span>
+        ${traineeBadge}
         ${t.isInitial?'<span style="background:var(--accent-light);color:var(--accent);font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px;border:1px solid #c5d9f0;">&#x2B50; Initial Trainee</span>':''}
       </div>
       <div class="training-field">Trained: <span>${t.date?fmtDate(t.date):t.isInitial?'<span style="color:var(--muted);">Date unknown</span>':'—'}</span></div>
-      <div class="training-field">Trained by: <span>${t.trainer?esc(t.trainer):t.isInitial?'<span style="color:var(--muted);">Unknown / pre-lab</span>':'—'}</span>${t.trainerEmail?' <span style="color:var(--muted);font-size:11px;">&lt;'+esc(t.trainerEmail)+'&gt;</span>':''}</div>
+      <div class="training-field">Trained by: <span>${trainerUser?esc(trainerUser.name||trainerUser.email):(t.trainer?esc(t.trainer):t.isInitial?'<span style="color:var(--muted);">Unknown / pre-lab</span>':'—')}</span>${t.trainerEmail&&!trainerUser?' <span style="color:var(--muted);font-size:11px;">&lt;'+esc(t.trainerEmail)+'&gt;</span>':''}${trainerBadge}</div>
       ${t.notes?`<div class="training-field" style="grid-column:1/-1;">Notes: <span>${esc(t.notes)}</span></div>`:''}
-    </div>`).join('');
+    </div>`;
+  }).join('');
+}
+
+// ── Auto-migrate existing training records: match by exact email ──
+function migrateTrainingLinks() {
+  if (!instruments || !regUsers) return;
+  let migrated = 0;
+  instruments.forEach(inst => {
+    if (!inst.training) return;
+    inst.training.forEach(t => {
+      // Trainee — match on exact email
+      if (!t.memberId && t.email) {
+        const u = regUsers.find(r => (r.email||'').toLowerCase() === t.email.toLowerCase());
+        if (u) { t.memberId = u.id; migrated++; }
+      }
+      // Trainer — match on exact email
+      if (!t.trainerId && t.trainerEmail) {
+        const u = regUsers.find(r => (r.email||'').toLowerCase() === t.trainerEmail.toLowerCase());
+        if (u) { t.trainerId = u.id; migrated++; }
+      }
+    });
+  });
+  if (migrated > 0) {
+    console.log('[Training] Auto-linked', migrated, 'existing records by email match');
+    saveInstData();
+  }
 }
 
 // ── INSTRUMENT CRUD ──
@@ -4052,24 +4105,52 @@ function openTrainingModal(instId){
   document.getElementById('tr-date').value='';
   document.getElementById('tr-initial').checked=false;
   onInitialTraineeChange();
+  // Trainee picker — single select, autofill name/email when picked
+  initLinkedMembersPicker('tr-trainee-picker', 'training-trainee', [], {
+    single: true,
+    onChange: (ids) => {
+      if (!ids.length) return;
+      const u = regUsers.find(r => r.id === ids[0]);
+      if (u) {
+        document.getElementById('tr-member').value = u.name || u.email || '';
+        document.getElementById('tr-email').value  = u.email || '';
+      }
+    }
+  });
+  // Trainer picker — single select, autofill trainer name/email when picked
+  initLinkedMembersPicker('tr-trainer-picker', 'training-trainer', [], {
+    single: true,
+    onChange: (ids) => {
+      if (!ids.length) return;
+      const u = regUsers.find(r => r.id === ids[0]);
+      if (u) {
+        document.getElementById('tr-trainer').value       = u.name || u.email || '';
+        document.getElementById('tr-trainer-email').value = u.email || '';
+      }
+    }
+  });
   document.getElementById('training-modal-overlay').classList.add('open');
 }
 function closeTrainingModal(){document.getElementById('training-modal-overlay').classList.remove('open');}
 function saveTraining(){
   const member=document.getElementById('tr-member').value.trim();
-  if(!member){alert('Please enter the member name.');return;}
+  if(!member){alert('Please enter the member name or select a registered member.');return;}
   const isInitial=document.getElementById('tr-initial').checked;
   const date=document.getElementById('tr-date').value;
   const trainer=document.getElementById('tr-trainer').value.trim();
   if(!isInitial&&(!date||!trainer)){alert('Please fill in Date Trained and Trained By, or check "initial trainee" if this predates lab training records.');return;}
   const idx=instruments.findIndex(i=>i.id===editingTrainingInstId); if(idx<0)return;
+  const traineeLinks = getLinkedMembers('training-trainee');
+  const trainerLinks = getLinkedMembers('training-trainer');
   instruments[idx].training.push({
     id:uid(), member,
     email:document.getElementById('tr-email').value.trim(),
+    memberId: traineeLinks[0] || null,
     isInitial,
     date: isInitial?(date||''):date,
     trainer: isInitial?(trainer||''):trainer,
     trainerEmail:document.getElementById('tr-trainer-email').value.trim(),
+    trainerId: trainerLinks[0] || null,
     notes:document.getElementById('tr-notes').value.trim()
   });
   saveInstData(); closeTrainingModal(); selectInstrument(editingTrainingInstId);
@@ -4916,6 +4997,8 @@ function importJSON() {
         if (data.bookings) { localStorage.setItem('dl_bookings', JSON.stringify(data.bookings)); bookings = data.bookings; }
         if (data.hvItems) { localStorage.setItem('dl_hvitems', JSON.stringify(data.hvItems)); hvItems = data.hvItems; }
         if (data.regUsers) { localStorage.setItem('dl_regusers', JSON.stringify(data.regUsers)); regUsers = data.regUsers; }
+        // Auto-link training records after restore (regUsers and instruments now both up to date)
+        if(typeof migrateTrainingLinks==='function') migrateTrainingLinks();
         // Re-render all tabs with new data immediately
         if(typeof renderEquipTable==='function') renderEquipTable();
         if(typeof renderChemTable==='function') renderChemTable();
@@ -5093,6 +5176,9 @@ async function loadAllFromFirebase() {
     if (settings.generalCode) localStorage.setItem('dl_general_code', settings.generalCode);
     if (settings.adminCode)   localStorage.setItem('dl_admin_code',   settings.adminCode);
   }
+
+  // After Firebase load, retry the training-record auto-link (now that regUsers is populated)
+  if (typeof migrateTrainingLinks === 'function') migrateTrainingLinks();
 }
 
 // ── Override settings save functions to also push to Firebase ──
@@ -6614,10 +6700,14 @@ function attachmentsDisplay(attachments) {
 
 const _linkedMemberBuffers = {};
 
-function initLinkedMembersPicker(slotId, context, existingIds) {
+// Picker options registry — supports single-select and on-change callback
+const _linkedMemberPickerOpts = {};
+
+function initLinkedMembersPicker(slotId, context, existingIds, opts) {
   const slot = document.getElementById(slotId);
   if (!slot) return;
   _linkedMemberBuffers[context] = (existingIds || []).slice();
+  _linkedMemberPickerOpts[context] = opts || {};
   slot.innerHTML = `
     <div class="linked-members-chips" id="${slotId}-chips"></div>
     <input type="text" class="linked-members-search" id="${slotId}-search"
@@ -6670,16 +6760,28 @@ function updateLinkedMemberSuggestions(slotId, context) {
 
 function addLinkedMember(slotId, context, id) {
   if (!_linkedMemberBuffers[context]) _linkedMemberBuffers[context] = [];
-  if (!_linkedMemberBuffers[context].includes(id)) _linkedMemberBuffers[context].push(id);
+  const opts = _linkedMemberPickerOpts[context] || {};
+  if (opts.single) {
+    _linkedMemberBuffers[context] = [id]; // replace any existing
+  } else if (!_linkedMemberBuffers[context].includes(id)) {
+    _linkedMemberBuffers[context].push(id);
+  }
   const search = document.getElementById(slotId + '-search');
   if (search) search.value = '';
   closeLinkedMemberSuggestions(slotId);
   renderLinkedMemberChips(slotId, context);
+  if (typeof opts.onChange === 'function') {
+    try { opts.onChange(_linkedMemberBuffers[context].slice()); } catch(e){ console.error(e); }
+  }
 }
 
 function removeLinkedMember(slotId, context, id) {
   _linkedMemberBuffers[context] = (_linkedMemberBuffers[context] || []).filter(x => x !== id);
   renderLinkedMemberChips(slotId, context);
+  const opts = _linkedMemberPickerOpts[context] || {};
+  if (typeof opts.onChange === 'function') {
+    try { opts.onChange(_linkedMemberBuffers[context].slice()); } catch(e){ console.error(e); }
+  }
 }
 
 function closeLinkedMemberSuggestions(slotId) {
@@ -7341,6 +7443,7 @@ function _origInit() { (function() {
     projects = JSON.parse(localStorage.getItem('dl_projects'));
   }
 })();
+migrateTrainingLinks();
 renderEquipTable();
 renderProjects();
 renderExpiryDashboard();
