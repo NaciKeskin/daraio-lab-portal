@@ -1458,6 +1458,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getFirestore, doc, getDoc, setDoc, onSnapshot, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyBUZt8REyhEE-49BvndMFUYBCbuPveNfsI",
@@ -1470,6 +1471,7 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
+    const auth = getAuth(app);
 
     // ── Expose to global scope for use by non-module scripts ──
     window._db = db;
@@ -1479,6 +1481,14 @@
     window._fsOnSnapshot = onSnapshot;
     window._fsCollection = collection;
     window._fsGetDocs = getDocs;
+    window._auth = auth;
+    window._ensureAnonymousAuth = async () => {
+      if (auth.currentUser) return auth.currentUser;
+      return (await signInAnonymously(auth)).user;
+    };
+    window._listenPublicBookings = (callback, onError) => onSnapshot(collection(db, 'bookings'), snap => {
+      callback(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    }, onError || (error => console.warn('Public bookings listener error:', error)));
     window._firebaseReady = true;
 
     // Notify the app that Firebase is ready
@@ -1546,6 +1556,7 @@
       <button class="nav-tab" onclick="switchTab('chemistry')" id="tab-chemistry">🧪 <span>Chemical Inventory</span></button>
       <button class="nav-tab" onclick="switchTab('projects')" id="tab-projects">📁 <span>Projects</span></button>
       <button class="nav-tab" onclick="switchTab('instruments')" id="tab-instruments">🔬 <span>Instruments</span></button>
+      <button class="nav-tab" onclick="window.location.href='bookings.html'" id="tab-bookings">📅 <span>Bookings</span></button>
       <button class="nav-tab" onclick="switchTab('highvalue')" id="tab-highvalue">💎 <span>High-Value Items</span></button>
       <button class="nav-tab" onclick="switchTab('members')" id="tab-members">👥 <span>Lab Members</span></button>
       <button class="nav-tab" onclick="switchTab('labmap')" id="tab-labmap">🗺 <span>Lab Map</span></button>
@@ -1633,8 +1644,14 @@
       <div class="home-card" onclick="switchTab('instruments')" id="home-card-instruments">
         <div class="home-card-icon">🔬</div>
         <h3>Instruments</h3>
-        <p>A dedicated section for high-value instruments requiring formal training. Includes user manuals, training requirements, and booking information.</p>
+        <p>A dedicated section for high-value instruments requiring formal training. Includes user manuals, training requirements, maintenance, and calibration records.</p>
         <span class="card-status live">&#x25CF; Active</span>
+      </div>
+      <div class="home-card" onclick="window.location.href='bookings.html'" id="home-card-bookings">
+        <div class="home-card-icon">📅</div>
+        <h3>Instrument Bookings</h3>
+        <p>Open the public booking calendar to reserve instruments, review availability, and manage reservations created from this browser.</p>
+        <span class="card-status live">● Public</span>
       </div>
       <div class="home-card" onclick="switchTab('labmap')" id="home-card-labmap">
         <div class="home-card-icon">🗺</div>
@@ -1866,12 +1883,11 @@
   <div class="page" id="page-instruments">
     <div id="inst-alert-banner" style="display:none;"></div>
     <div class="page-header">
-      <div><h2>Instruments</h2><p>High-value instruments, booking calendar, maintenance logs, and training records.</p></div>
+      <div><h2>Instruments</h2><p>High-value instrument records, maintenance logs, calibration history, and training records.</p></div>
       <button class="btn-add" id="inst-main-add-btn" onclick="instMainAdd()">&#xFF0B; Add Instrument</button>
     </div>
     <div class="inst-subtabs">
       <button class="inst-subtab active" id="inst-subtab-instruments" onclick="switchInstSubtab('instruments')">&#x1F4CB; Instruments &amp; Attachments</button>
-      <button class="inst-subtab" id="inst-subtab-calendar" onclick="switchInstSubtab('calendar')">&#x1F4C5; Booking Calendar</button>
       <button class="inst-subtab" id="inst-subtab-maintenance" onclick="switchInstSubtab('maintenance')">&#x1F527; Maintenance &amp; Calibration</button>
       <button class="inst-subtab" id="inst-subtab-stats" onclick="switchInstSubtab('stats')">&#x1F4CA; Usage Statistics</button>
     </div>
@@ -1901,22 +1917,6 @@
           </div>
           <div class="inst-sidebar-content" id="inst-sidebar-content" style="display:none;"></div>
         </div>
-      </div>
-    </div>
-    <div class="inst-subpage" id="inst-sub-calendar">
-      <div class="cal-nav">
-        <div class="cal-nav-title" id="cal-week-title">Week of ...</div>
-        <div class="cal-nav-btns">
-          <button class="cal-nav-btn" onclick="calNav(-1)">&larr; Prev</button>
-          <button class="cal-nav-btn today" onclick="calNavToday()">Today</button>
-          <button class="cal-nav-btn" onclick="calNav(1)">Next &rarr;</button>
-          <button class="btn-add" style="margin-left:8px;" onclick="openBookingModal(null,null,null)">&#xFF0B; Book Slot</button>
-        </div>
-      </div>
-      <div class="cal-legend" id="cal-legend"></div>
-      <div class="cal-wrap">
-        <div class="cal-header-row" id="cal-header"></div>
-        <div class="cal-body" id="cal-body"></div>
       </div>
     </div>
     <div class="inst-subpage" id="inst-sub-maintenance">
@@ -3748,7 +3748,6 @@ function switchInstSubtab(tab) {
   document.getElementById('inst-sub-'+tab).classList.add('active');
   const addBtn = document.getElementById('inst-main-add-btn');
   if(tab==='instruments') { addBtn.style.display=''; addBtn.textContent='\uFF0B Add Instrument'; addBtn.onclick=()=>openAddInstModal(); }
-  else if(tab==='calendar') { addBtn.style.display=''; addBtn.textContent='\uFF0B Book Slot'; addBtn.onclick=()=>openBookingModal(null,null,null); renderCalendar(); }
   else if(tab==='maintenance') { addBtn.style.display=''; addBtn.textContent='\uFF0B Add Log Entry'; addBtn.onclick=()=>openMaintModal(null); renderMaintLog(); }
   else { addBtn.style.display='none'; renderStats(); }
 }
@@ -5253,9 +5252,37 @@ window.addEventListener('offline', () => { document.getElementById('fb-offline-b
 async function bootstrapApp() {
   const loadingEl = document.getElementById('fb-loading');
   try {
+    if (window._ensureAnonymousAuth) await window._ensureAnonymousAuth();
+  } catch(e) {
+    // Do not block the protected portal if Anonymous Authentication has not
+    // been enabled yet. Only the standalone public booking page requires it.
+    console.warn('Anonymous booking auth unavailable:', e);
+  }
+  try {
     await loadAllFromFirebase();
   } catch(e) {
     console.warn('Firebase load failed, using local data:', e);
+  }
+  try {
+    if (window._listenPublicBookings) {
+      if (window._publicBookingsUnsubscribe) window._publicBookingsUnsubscribe();
+      window._publicBookingsUnsubscribe = window._listenPublicBookings(rows => {
+        bookings = rows.map(b => ({
+          id: b.id,
+          instId: b.instrumentId,
+          date: b.date,
+          start: b.start,
+          end: b.end,
+          user: b.bookedBy,
+          purpose: b.purpose || '',
+          createdByUid: b.createdByUid || ''
+        }));
+        localStorage.setItem('dl_bookings', JSON.stringify(bookings));
+        if (document.getElementById('inst-sub-stats')?.classList.contains('active')) renderStats();
+      }, error => console.warn('Could not load public bookings for usage statistics:', error));
+    }
+  } catch(e) {
+    console.warn('Public booking listener could not start:', e);
   }
   // Hide loading overlay
   loadingEl.classList.add('fade-out');
@@ -6522,6 +6549,7 @@ const MANAGEABLE_TABS = [
   { id:'chemistry',   label:'Chemical Inventory',   icon:'🧪',  homeCardId:'home-card-chemistry'   },
   { id:'projects',    label:'Projects',             icon:'📁',  homeCardId:'home-card-projects'    },
   { id:'instruments', label:'Instruments',          icon:'🔬',  homeCardId:'home-card-instruments' },
+  { id:'bookings',    label:'Instrument Bookings',  icon:'📅',  homeCardId:'home-card-bookings'    },
   { id:'highvalue',   label:'High-Value Items',     icon:'💎',  homeCardId:'home-card-highvalue'   },
   { id:'members',     label:'Lab Members',          icon:'👥',  homeCardId:'home-card-members'     },
   { id:'labmap',      label:'Lab Map',              icon:'🗺',  homeCardId:'home-card-labmap'      },

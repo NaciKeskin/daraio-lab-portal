@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Daraio Lab — Instrument Bookings</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#f5f4f0; --surface:#fff; --border:#e2e0d8; --text:#1a1917; --muted:#6b6860;
+  --accent:#1d4e89; --accent-hover:#163a6b; --accent-light:#e8eef6;
+  --danger:#c0392b; --danger-light:#fdf0ef; --success:#1a7a4a; --success-light:#edf7f2;
+  --warning:#b45309; --radius:10px; --shadow:0 2px 12px rgba(0,0,0,.07); --shadow-lg:0 8px 32px rgba(0,0,0,.12);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+button,input,select,textarea{font:inherit}
+.header{height:62px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 28px;gap:14px;position:sticky;top:0;z-index:20}
+.logo{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--text)}
+.logo-mark{width:34px;height:34px;border-radius:8px;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;font-weight:600;font-size:13px}
+.logo-title{font-size:15px;font-weight:600}.logo-sub{font-size:11px;color:var(--muted)}
+.header-spacer{flex:1}.portal-link{color:var(--accent);text-decoration:none;font-size:13px;font-weight:500;padding:8px 12px;border-radius:7px}.portal-link:hover{background:var(--accent-light)}
+main{max-width:1240px;margin:0 auto;padding:30px}
+.hero{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;margin-bottom:20px;flex-wrap:wrap}
+.hero h1{font-size:24px;margin-bottom:5px}.hero p{font-size:14px;color:var(--muted);line-height:1.5}
+.public-badge{display:inline-flex;align-items:center;gap:6px;background:var(--success-light);color:var(--success);font-size:12px;font-weight:600;padding:5px 10px;border-radius:20px;margin-top:9px}
+.notice{background:var(--accent-light);border:1px solid #c5d9f0;color:var(--accent);padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:18px;line-height:1.5}
+.cal-nav{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}.cal-nav-title{font-size:16px;font-weight:600}.btn-row{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+.btn{padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;font-weight:500;font-size:13px}.btn:hover{background:var(--bg)}.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}.btn.primary:hover{background:var(--accent-hover)}.btn.danger{background:var(--danger);border-color:var(--danger);color:#fff}
+.legend{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:13px}.legend-item{display:flex;align-items:center;gap:6px;font-size:12px}.legend-dot{width:12px;height:12px;border-radius:3px}
+.cal-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
+.cal-header{display:grid;grid-template-columns:58px repeat(7,minmax(110px,1fr));background:#f9f8f5;border-bottom:1px solid var(--border);min-width:850px}.cal-header-cell{text-align:center;padding:9px 5px;border-right:1px solid var(--border);font-size:12px;font-weight:600;color:var(--muted)}.cal-header-cell:last-child{border-right:none}.day-num{display:block;font-size:18px;color:var(--text);line-height:1.2}.today-col{background:rgba(29,78,137,.045)!important}.cal-header-cell.today-col{color:var(--accent)}.cal-header-cell.today-col .day-num{color:var(--accent)}
+.cal-scroll{overflow:auto;max-height:620px}.cal-body{min-width:850px}.time-row{display:grid;grid-template-columns:58px repeat(7,minmax(110px,1fr));min-height:52px;border-bottom:1px solid #f0efe8}.time-label{font:11px 'DM Mono',monospace;color:var(--muted);text-align:right;padding:7px 8px;border-right:1px solid var(--border)}.cal-cell{border-right:1px solid #f0efe8;padding:3px;cursor:pointer;min-height:52px}.cal-cell:last-child{border-right:none}.cal-cell:hover{background:var(--accent-light)}
+.booking{border-radius:5px;padding:4px 6px;font-size:11px;font-weight:500;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px;cursor:pointer}.booking.owned{box-shadow:inset 0 0 0 1px rgba(0,0,0,.14)}
+.c0{background:#dbeafe;color:#1e40af;border-left:3px solid #3b82f6}.c1{background:#d1fae5;color:#065f46;border-left:3px solid #10b981}.c2{background:#fce7f3;color:#9d174d;border-left:3px solid #ec4899}.c3{background:#fef3c7;color:#92400e;border-left:3px solid #f59e0b}.c4{background:#ede9fe;color:#5b21b6;border-left:3px solid #8b5cf6}.c5{background:#ffedd5;color:#9a3412;border-left:3px solid #f97316}
+.loading{position:fixed;inset:0;background:var(--bg);z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px}.spinner{width:40px;height:40px;border-radius:50%;border:3px solid var(--border);border-top-color:var(--accent);animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.38);z-index:60;display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;pointer-events:none;transition:opacity .18s}.modal-overlay.open{opacity:1;pointer-events:auto}.modal{background:var(--surface);width:100%;max-width:500px;border-radius:14px;box-shadow:var(--shadow-lg);overflow:hidden}.modal-header{display:flex;align-items:center;justify-content:space-between;padding:20px 22px 16px;border-bottom:1px solid var(--border)}.modal-header h2{font-size:17px}.close{width:31px;height:31px;border:1px solid var(--border);border-radius:7px;background:transparent;cursor:pointer}.modal-body{padding:22px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:15px}.field.full{grid-column:1/-1}.field label{display:block;font-size:13px;font-weight:500;margin-bottom:6px}.field input,.field select,.field textarea{width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);outline:none}.field textarea{resize:vertical;min-height:72px}.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(29,78,137,.1);background:#fff}.required{color:var(--danger)}.modal-footer{padding:15px 22px;border-top:1px solid var(--border);display:flex;align-items:center;gap:8px;justify-content:flex-end}.owner-note{font-size:12px;color:var(--muted);margin-right:auto}
+.toast{position:fixed;bottom:22px;left:50%;transform:translate(-50%,20px);background:#222;color:#fff;padding:10px 16px;border-radius:8px;font-size:13px;opacity:0;pointer-events:none;transition:.2s;z-index:120}.toast.show{opacity:1;transform:translate(-50%,0)}.toast.error{background:var(--danger)}
+.empty{padding:70px 20px;text-align:center;color:var(--muted)}
+@media(max-width:720px){.header{padding:0 14px}.logo-sub{display:none}.portal-link{font-size:12px}main{padding:18px 12px}.hero h1{font-size:21px}.grid{grid-template-columns:1fr}.field.full{grid-column:1}.cal-header,.cal-body{min-width:780px}}
+</style>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, collection, doc, getDocs, onSnapshot, runTransaction } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBUZt8REyhEE-49BvndMFUYBCbuPveNfsI",
+  authDomain: "daraio-lab-portal.firebaseapp.com",
+  projectId: "daraio-lab-portal",
+  storageBucket: "daraio-lab-portal.firebasestorage.app",
+  messagingSenderId: "933995842211",
+  appId: "1:933995842211:web:e59f30b76565eb57e54d16"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const COLORS = ['c0','c1','c2','c3','c4','c5'];
+const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+let instruments = [];
+let bookings = [];
+let currentUid = '';
+let weekOffset = 0;
+let editingId = null;
+let unsubInstruments = null;
+let unsubBookings = null;
+
+const $ = id => document.getElementById(id);
+const esc = value => String(value ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const uid = () => (crypto.randomUUID ? crypto.randomUUID() : 'bk_' + Date.now().toString(36) + Math.random().toString(36).slice(2));
+const minutes = t => { const [h,m] = String(t).split(':').map(Number); return h*60 + m; };
+const localDate = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+const startOfWeek = () => { const d = new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate() - ((d.getDay()+6)%7) + weekOffset*7); return d; };
+const instrumentById = id => instruments.find(i => i.id === id);
+const colorIndex = id => Math.max(0, instruments.findIndex(i => i.id === id)) % COLORS.length;
+const isOwned = b => Boolean(currentUid && b.createdByUid === currentUid);
+const slotTimes = (start,end) => {
+  const result=[];
+  for(let m=minutes(start);m<minutes(end);m+=15){
+    result.push(`${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`);
+  }
+  return result;
+};
+const slotDocId = (instrumentId,date,time) => `${instrumentId}__${date}__${time.replace(':','')}`;
+
+function toast(message, error=false){
+  const el = $('toast'); el.textContent = message; el.className = 'toast show' + (error ? ' error' : '');
+  clearTimeout(window.__toastTimer); window.__toastTimer = setTimeout(()=>el.className='toast',3000);
+}
+
+function populateInstrumentSelect(){
+  const select = $('bk-instrument');
+  const old = select.value;
+  const available = instruments.filter(i => i.bookingEnabled !== false && i.status !== 'Out of Service');
+  select.innerHTML = '<option value="">-- Select Instrument --</option>' + available.map(i => `<option value="${esc(i.id)}">${esc(i.name)}${i.location ? ' · '+esc(i.location) : ''}</option>`).join('');
+  if (available.some(i=>i.id===old)) select.value = old;
+}
+
+function render(){
+  populateInstrumentSelect();
+  const start = startOfWeek();
+  const days = Array.from({length:7},(_,i)=>{const d=new Date(start);d.setDate(start.getDate()+i);return d;});
+  const end = new Date(days[6]);
+  $('week-title').textContent = `${start.toLocaleDateString('en-US',{month:'short',day:'numeric'})} – ${end.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}`;
+  const today = localDate(new Date());
+  $('legend').innerHTML = instruments.filter(i=>i.bookingEnabled!==false).map(i=>`<div class="legend-item"><span class="legend-dot ${COLORS[colorIndex(i.id)]}"></span>${esc(i.name)}</div>`).join('');
+  $('cal-header').innerHTML = '<div class="cal-header-cell"></div>' + days.map(d=>`<div class="cal-header-cell ${localDate(d)===today?'today-col':''}"><span class="day-num">${d.getDate()}</span>${DAYS[d.getDay()]}</div>`).join('');
+  let html='';
+  for(let h=0;h<24;h++){
+    const label = h===0?'12am':h<12?`${h}am`:h===12?'12pm':`${h-12}pm`;
+    html += `<div class="time-row"><div class="time-label">${label}</div>`;
+    for(const d of days){
+      const date = localDate(d);
+      const starts = bookings.filter(b=>b.date===date && Math.floor(minutes(b.start)/60)===h).sort((a,b)=>a.start.localeCompare(b.start));
+      html += `<div class="cal-cell ${date===today?'today-col':''}" data-date="${date}" data-hour="${h}">`;
+      for(const b of starts){
+        const inst=instrumentById(b.instrumentId);
+        const owned=isOwned(b);
+        const title=`${b.start}–${b.end} | ${b.bookedBy}${b.purpose?' | '+b.purpose:''}${owned?' | Click to edit/cancel':' | Reserved'}`;
+        html += `<div class="booking ${COLORS[colorIndex(b.instrumentId)]} ${owned?'owned':''}" data-booking-id="${esc(b.id)}" title="${esc(title)}">${esc(b.start)} · ${esc(b.bookedBy)} · ${esc(inst?.name||'Instrument')}</div>`;
+      }
+      html += '</div>';
+    }
+    html += '</div>';
+  }
+  $('cal-body').innerHTML=html;
+  document.querySelectorAll('.cal-cell').forEach(cell=>cell.addEventListener('click',e=>{
+    if(e.target.closest('.booking')) return;
+    openBooking(null,cell.dataset.date,Number(cell.dataset.hour));
+  }));
+  document.querySelectorAll('.booking').forEach(el=>el.addEventListener('click',e=>{
+    e.stopPropagation();
+    const booking=bookings.find(b=>b.id===el.dataset.bookingId);
+    if(!booking) return;
+    if(isOwned(booking)) openBooking(booking);
+    else toast(`${booking.start}–${booking.end} is reserved by ${booking.bookedBy}.`);
+  }));
+}
+
+function openBooking(booking=null,date='',hour=null){
+  editingId=booking?.id||null;
+  $('modal-title').textContent=booking?'Edit Booking':'Book Instrument';
+  $('bk-instrument').value=booking?.instrumentId||'';
+  $('bk-date').value=booking?.date||date||localDate(new Date());
+  $('bk-start').value=booking?.start||(hour!==null?`${String(hour).padStart(2,'0')}:00`:'09:00');
+  $('bk-end').value=booking?.end||(hour!==null?(hour>=23?'23:45':`${String(hour+1).padStart(2,'0')}:00`):'10:00');
+  $('bk-user').value=booking?.bookedBy||localStorage.getItem('dl_booking_name')||'';
+  $('bk-purpose').value=booking?.purpose||'';
+  $('delete-btn').style.display=booking?'':'none';
+  $('owner-note').textContent=booking?'Only bookings created from this browser can be changed.':'';
+  $('booking-modal').classList.add('open');
+}
+function closeBooking(){ $('booking-modal').classList.remove('open'); editingId=null; }
+
+async function getFreshBookings(){
+  const snap=await getDocs(collection(db,'bookings'));
+  return snap.docs.map(d=>({id:d.id,...d.data()}));
+}
+
+async function saveBooking(){
+  const instrumentId=$('bk-instrument').value;
+  const date=$('bk-date').value;
+  const start=$('bk-start').value;
+  const end=$('bk-end').value;
+  const bookedBy=$('bk-user').value.trim();
+  const purpose=$('bk-purpose').value.trim();
+  if(!instrumentId||!date||!start||!end||!bookedBy){toast('Please complete all required fields.',true);return;}
+  if(minutes(end)<=minutes(start)){toast('End time must be after start time.',true);return;}
+  if(minutes(start)%15!==0 || minutes(end)%15!==0){toast('Bookings must start and end on a 15-minute interval.',true);return;}
+  const inst=instrumentById(instrumentId);
+  if(!inst){toast('The selected instrument is unavailable.',true);return;}
+  const duration=(minutes(end)-minutes(start))/60;
+  if(inst.maxHours && duration>Number(inst.maxHours)){toast(`This instrument may be booked for at most ${inst.maxHours} hours.`,true);return;}
+  $('save-btn').disabled=true;
+  try{
+    const fresh=await getFreshBookings();
+    const conflict=fresh.find(b=>b.id!==editingId && b.instrumentId===instrumentId && b.date===date && minutes(start)<minutes(b.end) && minutes(end)>minutes(b.start));
+    if(conflict){toast(`Conflict: ${conflict.start}–${conflict.end} is already reserved.`,true);return;}
+    const old=editingId?fresh.find(b=>b.id===editingId):null;
+    if(old && old.createdByUid!==currentUid){toast('You can only modify bookings created from this browser.',true);return;}
+    const wasEditing=Boolean(editingId);
+    const id=editingId||uid();
+    const now=new Date().toISOString();
+    const newSlotTimes=slotTimes(start,end);
+    const oldSlotTimes=old?slotTimes(old.start,old.end):[];
+    const allSlotIds=[...new Set([
+      ...newSlotTimes.map(t=>slotDocId(instrumentId,date,t)),
+      ...oldSlotTimes.map(t=>slotDocId(old.instrumentId,old.date,t))
+    ])];
+    const slotRefs=allSlotIds.map(slotId=>doc(db,'bookingSlots',slotId));
+    const bookingRef=doc(db,'bookings',id);
+    await runTransaction(db,async tx=>{
+      // Firestore requires all transaction reads before writes.
+      const slotSnaps=[];
+      for(const ref of slotRefs) slotSnaps.push(await tx.get(ref));
+      for(const snap of slotSnaps){
+        if(snap.exists() && snap.data().bookingId!==id){
+          throw new Error('SLOT_CONFLICT');
+        }
+      }
+      tx.set(bookingRef,{
+        instrumentId,date,start,end,bookedBy,purpose,
+        createdByUid:currentUid,
+        createdAt:old?.createdAt||now,
+        updatedAt:now
+      });
+      const newIds=new Set(newSlotTimes.map(t=>slotDocId(instrumentId,date,t)));
+      for(const t of oldSlotTimes){
+        const oldId=slotDocId(old.instrumentId,old.date,t);
+        if(!newIds.has(oldId)) tx.delete(doc(db,'bookingSlots',oldId));
+      }
+      for(const t of newSlotTimes){
+        tx.set(doc(db,'bookingSlots',slotDocId(instrumentId,date,t)),{
+          bookingId:id,instrumentId,date,slotStart:t,createdByUid:currentUid
+        });
+      }
+    });
+    localStorage.setItem('dl_booking_name',bookedBy);
+    closeBooking(); toast(wasEditing?'Booking updated.':'Booking created.');
+  }catch(err){console.error(err);toast(err?.message==='SLOT_CONFLICT'?'Conflict: one or more 15-minute slots were just reserved.':'Could not save the booking. Check Firebase rules and network access.',true);}
+  finally{$('save-btn').disabled=false;}
+}
+
+async function cancelBooking(){
+  const booking=bookings.find(b=>b.id===editingId);
+  if(!booking||!isOwned(booking)){toast('You cannot cancel this booking.',true);return;}
+  if(!confirm(`Cancel the ${booking.start}–${booking.end} booking?`)) return;
+  try{
+    await runTransaction(db,async tx=>{
+      const bookingRef=doc(db,'bookings',booking.id);
+      const bookingSnap=await tx.get(bookingRef);
+      if(!bookingSnap.exists() || bookingSnap.data().createdByUid!==currentUid) throw new Error('NOT_OWNER');
+      tx.delete(bookingRef);
+      for(const t of slotTimes(booking.start,booking.end)){
+        tx.delete(doc(db,'bookingSlots',slotDocId(booking.instrumentId,booking.date,t)));
+      }
+    });
+    closeBooking();toast('Booking cancelled.');
+  }catch(err){console.error(err);toast('Could not cancel the booking.',true);}
+}
+
+window.openBooking=openBooking;
+window.closeBooking=closeBooking;
+window.saveBooking=saveBooking;
+window.cancelBooking=cancelBooking;
+window.changeWeek=delta=>{weekOffset+=delta;render();};
+window.todayWeek=()=>{weekOffset=0;render();};
+
+async function init(){
+  try{
+    const credential=await signInAnonymously(auth);
+    currentUid=credential.user.uid;
+    unsubInstruments=onSnapshot(collection(db,'instruments'),snap=>{
+      instruments=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+      render();
+    },err=>{console.error(err);toast('Cannot read instrument list. Check Firestore rules.',true);});
+    unsubBookings=onSnapshot(collection(db,'bookings'),snap=>{
+      bookings=snap.docs.map(d=>({id:d.id,...d.data()}));
+      render();
+    },err=>{console.error(err);toast('Cannot read bookings. Check Firestore rules.',true);});
+    $('loading').style.display='none';
+    setTimeout(()=>{$('cal-scroll').scrollTop=52*8;},150);
+  }catch(err){console.error(err);$('loading-text').textContent='Unable to connect. Enable Firebase Anonymous Authentication and check Firestore rules.';toast('Firebase connection failed.',true);}
+}
+init();
+</script>
+</head>
+<body>
+<div class="loading" id="loading"><div class="spinner"></div><p id="loading-text">Connecting to booking calendar…</p></div>
+<header class="header">
+  <a class="logo" href="bookings.html"><span class="logo-mark">DL</span><span><span class="logo-title">Daraio Lab</span><span class="logo-sub">Instrument Booking Calendar</span></span></a>
+  <div class="header-spacer"></div>
+  <a class="portal-link" href="index.html">Protected portal →</a>
+</header>
+<main>
+  <section class="hero">
+    <div><h1>Instrument Booking Calendar</h1><p>Review availability and reserve lab instruments without signing into the main portal.</p><span class="public-badge">● Public booking page</span></div>
+    <button class="btn primary" onclick="openBooking()">＋ Book Slot</button>
+  </section>
+  <div class="notice">This page downloads only the public <strong>instruments</strong> and <strong>bookings</strong> records. Internal 15-minute lock documents are touched transactionally to prevent simultaneous double-booking, but are never listed or displayed. You can edit or cancel reservations created from this browser; other reservations are view-only.</div>
+  <div class="cal-nav"><div class="cal-nav-title" id="week-title">Week of…</div><div class="btn-row"><button class="btn" onclick="changeWeek(-1)">← Prev</button><button class="btn primary" onclick="todayWeek()">Today</button><button class="btn" onclick="changeWeek(1)">Next →</button></div></div>
+  <div class="legend" id="legend"></div>
+  <div class="cal-wrap"><div class="cal-header" id="cal-header"></div><div class="cal-scroll" id="cal-scroll"><div class="cal-body" id="cal-body"></div></div></div>
+</main>
+<div class="modal-overlay" id="booking-modal" onclick="if(event.target===this)closeBooking()">
+  <div class="modal">
+    <div class="modal-header"><h2 id="modal-title">Book Instrument</h2><button class="close" onclick="closeBooking()">✕</button></div>
+    <div class="modal-body"><div class="grid">
+      <div class="field full"><label>Instrument <span class="required">*</span></label><select id="bk-instrument"><option value="">-- Select Instrument --</option></select></div>
+      <div class="field"><label>Date <span class="required">*</span></label><input type="date" id="bk-date"></div>
+      <div class="field"><label>Start Time <span class="required">*</span></label><input type="time" id="bk-start" step="900"></div>
+      <div class="field"><label>End Time <span class="required">*</span></label><input type="time" id="bk-end" step="900"></div>
+      <div class="field full"><label>Booked By <span class="required">*</span></label><input type="text" id="bk-user" maxlength="80" placeholder="Your name"></div>
+      <div class="field full"><label>Purpose / Notes</label><textarea id="bk-purpose" maxlength="500" placeholder="What will this session be used for?"></textarea></div>
+    </div></div>
+    <div class="modal-footer"><span class="owner-note" id="owner-note"></span><button class="btn danger" id="delete-btn" onclick="cancelBooking()" style="display:none">Cancel Booking</button><button class="btn" onclick="closeBooking()">Close</button><button class="btn primary" id="save-btn" onclick="saveBooking()">Save</button></div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+</body>
+</html>
