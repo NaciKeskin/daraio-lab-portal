@@ -12,7 +12,7 @@
   --bg:#f5f4f0; --surface:#fff; --border:#e2e0d8; --text:#1a1917; --muted:#6b6860;
   --accent:#1d4e89; --accent-hover:#163a6b; --accent-light:#e8eef6;
   --danger:#c0392b; --danger-light:#fdf0ef; --success:#1a7a4a; --success-light:#edf7f2;
-  --warning:#b45309; --radius:10px; --shadow:0 2px 12px rgba(0,0,0,.07); --shadow-lg:0 8px 32px rgba(0,0,0,.12);
+  --warning:#b45309; --radius:10px; --shadow:0 2px 12px rgba(0,0,0,.07); --shadow-lg:0 8px 32px rgba(0,0,0,.12); --hour-height:64px; --day-height:1536px;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
@@ -32,14 +32,13 @@ main{max-width:1240px;margin:0 auto;padding:30px}
 .legend{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:13px}.legend-item{display:flex;align-items:center;gap:6px;font-size:12px}.legend-dot{width:12px;height:12px;border-radius:3px}
 .cal-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
 .cal-header{display:grid;grid-template-columns:58px repeat(7,minmax(110px,1fr));background:#f9f8f5;border-bottom:1px solid var(--border);min-width:850px}.cal-header-cell{text-align:center;padding:9px 5px;border-right:1px solid var(--border);font-size:12px;font-weight:600;color:var(--muted)}.cal-header-cell:last-child{border-right:none}.day-num{display:block;font-size:18px;color:var(--text);line-height:1.2}.today-col{background:rgba(29,78,137,.045)!important}.cal-header-cell.today-col{color:var(--accent)}.cal-header-cell.today-col .day-num{color:var(--accent)}
-.cal-scroll{overflow:auto;max-height:620px}.cal-body{min-width:850px}.time-row{display:grid;grid-template-columns:58px repeat(7,minmax(110px,1fr));min-height:52px;border-bottom:1px solid #f0efe8}.time-label{font:11px 'DM Mono',monospace;color:var(--muted);text-align:right;padding:7px 8px;border-right:1px solid var(--border)}.cal-cell{border-right:1px solid #f0efe8;padding:3px;cursor:pointer;min-height:52px}.cal-cell:last-child{border-right:none}.cal-cell:hover{background:var(--accent-light)}
-.booking{border-radius:5px;padding:4px 6px;font-size:11px;font-weight:500;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px;cursor:pointer}.booking.owned{box-shadow:inset 0 0 0 1px rgba(0,0,0,.14)}
+.cal-scroll{overflow:auto;max-height:620px}.cal-body{min-width:850px}.calendar-grid{display:grid;grid-template-columns:58px repeat(7,minmax(110px,1fr));min-width:850px;height:var(--day-height);position:relative}.time-axis{position:relative;height:var(--day-height);border-right:1px solid var(--border);background:#faf9f6}.time-axis-label{position:absolute;right:8px;font:11px 'DM Mono',monospace;color:var(--muted);white-space:nowrap}.day-column{position:relative;height:var(--day-height);border-right:1px solid #f0efe8;cursor:pointer;background-color:var(--surface);background-image:linear-gradient(to bottom,transparent 24%,#f3f1eb 25%,transparent 26%,transparent 49%,#f3f1eb 50%,transparent 51%,transparent 74%,#f3f1eb 75%,transparent 76%,transparent 98%,#dedbd2 99%,#dedbd2 100%);background-size:100% var(--hour-height)}.day-column:last-child{border-right:none}.day-column:hover{background-color:#fbfcfe}.day-column.today-col{background-color:rgba(29,78,137,.045)!important}.booking{position:absolute;z-index:5;box-sizing:border-box;border-radius:5px;padding:4px 6px;font-size:11px;font-weight:500;line-height:1.25;overflow:hidden;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.08)}.booking:hover{z-index:8;filter:brightness(.98);box-shadow:0 3px 9px rgba(0,0,0,.16)}.booking.owned{box-shadow:inset 0 0 0 1px rgba(0,0,0,.18),0 1px 2px rgba(0,0,0,.08)}.booking-title{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.booking-time{display:block;font-family:'DM Mono',monospace;font-size:10px;opacity:.82;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
 .c0{background:#dbeafe;color:#1e40af;border-left:3px solid #3b82f6}.c1{background:#d1fae5;color:#065f46;border-left:3px solid #10b981}.c2{background:#fce7f3;color:#9d174d;border-left:3px solid #ec4899}.c3{background:#fef3c7;color:#92400e;border-left:3px solid #f59e0b}.c4{background:#ede9fe;color:#5b21b6;border-left:3px solid #8b5cf6}.c5{background:#ffedd5;color:#9a3412;border-left:3px solid #f97316}
 .loading{position:fixed;inset:0;background:var(--bg);z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px}.spinner{width:40px;height:40px;border-radius:50%;border:3px solid var(--border);border-top-color:var(--accent);animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.38);z-index:60;display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;pointer-events:none;transition:opacity .18s}.modal-overlay.open{opacity:1;pointer-events:auto}.modal{background:var(--surface);width:100%;max-width:500px;border-radius:14px;box-shadow:var(--shadow-lg);overflow:hidden}.modal-header{display:flex;align-items:center;justify-content:space-between;padding:20px 22px 16px;border-bottom:1px solid var(--border)}.modal-header h2{font-size:17px}.close{width:31px;height:31px;border:1px solid var(--border);border-radius:7px;background:transparent;cursor:pointer}.modal-body{padding:22px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:15px}.field.full{grid-column:1/-1}.field label{display:block;font-size:13px;font-weight:500;margin-bottom:6px}.field input,.field select,.field textarea{width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);outline:none}.field textarea{resize:vertical;min-height:72px}.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(29,78,137,.1);background:#fff}.required{color:var(--danger)}.modal-footer{padding:15px 22px;border-top:1px solid var(--border);display:flex;align-items:center;gap:8px;justify-content:flex-end}.owner-note{font-size:12px;color:var(--muted);margin-right:auto}
 .toast{position:fixed;bottom:22px;left:50%;transform:translate(-50%,20px);background:#222;color:#fff;padding:10px 16px;border-radius:8px;font-size:13px;opacity:0;pointer-events:none;transition:.2s;z-index:120}.toast.show{opacity:1;transform:translate(-50%,0)}.toast.error{background:var(--danger)}
-.empty{padding:70px 20px;text-align:center;color:var(--muted)}
-@media(max-width:720px){.header{padding:0 14px}.logo-sub{display:none}.portal-link{font-size:12px}main{padding:18px 12px}.hero h1{font-size:21px}.grid{grid-template-columns:1fr}.field.full{grid-column:1}.cal-header,.cal-body{min-width:780px}}
+.empty{padding:70px 20px;text-align:center;color:var(--muted)}.detail-list{display:grid;gap:0;border:1px solid var(--border);border-radius:10px;overflow:hidden}.detail-row{display:grid;grid-template-columns:120px 1fr;gap:16px;padding:13px 15px;border-bottom:1px solid var(--border);align-items:start}.detail-row:last-child{border-bottom:none}.detail-label{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}.detail-value{font-size:14px;line-height:1.45;overflow-wrap:anywhere}.detail-purpose{white-space:pre-wrap}.detail-owner{margin-top:13px;padding:10px 12px;border-radius:8px;background:var(--accent-light);color:var(--accent);font-size:12px;line-height:1.45}
+@media(max-width:720px){.header{padding:0 14px}.logo-sub{display:none}.portal-link{font-size:12px}main{padding:18px 12px}.hero h1{font-size:21px}.grid{grid-template-columns:1fr}.field.full{grid-column:1}.cal-header,.cal-body,.calendar-grid{min-width:780px}.detail-row{grid-template-columns:1fr;gap:4px}}
 </style>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
@@ -60,11 +59,13 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const COLORS = ['c0','c1','c2','c3','c4','c5'];
 const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const HOUR_HEIGHT = 64;
 let instruments = [];
 let bookings = [];
 let currentUid = '';
 let weekOffset = 0;
 let editingId = null;
+let viewingId = null;
 let unsubInstruments = null;
 let unsubBookings = null;
 
@@ -85,6 +86,49 @@ const slotTimes = (start,end) => {
   return result;
 };
 const slotDocId = (instrumentId,date,time) => `${instrumentId}__${date}__${time.replace(':','')}`;
+const timeFromMinutes = total => `${String(Math.floor(total/60)).padStart(2,'0')}:${String(total%60).padStart(2,'0')}`;
+const displayTime = value => {
+  const total=minutes(value), h=Math.floor(total/60), m=total%60;
+  const suffix=h<12?'AM':'PM', hour=h%12||12;
+  return `${hour}:${String(m).padStart(2,'0')} ${suffix}`;
+};
+const displayDate = value => {
+  const [y,m,d]=String(value).split('-').map(Number);
+  return new Date(y,m-1,d).toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+};
+
+function layoutOverlaps(dayBookings){
+  const valid=dayBookings.filter(b=>minutes(b.end)>minutes(b.start)).sort((a,b)=>minutes(a.start)-minutes(b.start)||minutes(a.end)-minutes(b.end));
+  const clusters=[];
+  let cluster=[];
+  let clusterEnd=-1;
+  for(const booking of valid){
+    const start=minutes(booking.start), end=minutes(booking.end);
+    if(cluster.length && start>=clusterEnd){
+      clusters.push(cluster);
+      cluster=[];
+      clusterEnd=-1;
+    }
+    cluster.push(booking);
+    clusterEnd=Math.max(clusterEnd,end);
+  }
+  if(cluster.length) clusters.push(cluster);
+
+  const laidOut=[];
+  for(const group of clusters){
+    const laneEnds=[];
+    const assigned=[];
+    for(const booking of group){
+      const start=minutes(booking.start), end=minutes(booking.end);
+      let lane=laneEnds.findIndex(laneEnd=>laneEnd<=start);
+      if(lane<0){lane=laneEnds.length;laneEnds.push(end);}else{laneEnds[lane]=end;}
+      assigned.push({booking,lane});
+    }
+    const laneCount=Math.max(1,laneEnds.length);
+    for(const item of assigned) laidOut.push({...item,laneCount});
+  }
+  return laidOut;
+}
 
 function toast(message, error=false){
   const el = $('toast'); el.textContent = message; el.className = 'toast show' + (error ? ' error' : '');
@@ -108,45 +152,91 @@ function render(){
   const today = localDate(new Date());
   $('legend').innerHTML = instruments.filter(i=>i.bookingEnabled!==false).map(i=>`<div class="legend-item"><span class="legend-dot ${COLORS[colorIndex(i.id)]}"></span>${esc(i.name)}</div>`).join('');
   $('cal-header').innerHTML = '<div class="cal-header-cell"></div>' + days.map(d=>`<div class="cal-header-cell ${localDate(d)===today?'today-col':''}"><span class="day-num">${d.getDate()}</span>${DAYS[d.getDay()]}</div>`).join('');
-  let html='';
+
+  let html='<div class="calendar-grid"><div class="time-axis">';
   for(let h=0;h<24;h++){
     const label = h===0?'12am':h<12?`${h}am`:h===12?'12pm':`${h-12}pm`;
-    html += `<div class="time-row"><div class="time-label">${label}</div>`;
-    for(const d of days){
-      const date = localDate(d);
-      const starts = bookings.filter(b=>b.date===date && Math.floor(minutes(b.start)/60)===h).sort((a,b)=>a.start.localeCompare(b.start));
-      html += `<div class="cal-cell ${date===today?'today-col':''}" data-date="${date}" data-hour="${h}">`;
-      for(const b of starts){
-        const inst=instrumentById(b.instrumentId);
-        const owned=isOwned(b);
-        const title=`${b.start}–${b.end} | ${b.bookedBy}${b.purpose?' | '+b.purpose:''}${owned?' | Click to edit/cancel':' | Reserved'}`;
-        html += `<div class="booking ${COLORS[colorIndex(b.instrumentId)]} ${owned?'owned':''}" data-booking-id="${esc(b.id)}" title="${esc(title)}">${esc(b.start)} · ${esc(b.bookedBy)} · ${esc(inst?.name||'Instrument')}</div>`;
-      }
-      html += '</div>';
+    html += `<div class="time-axis-label" style="top:${h*HOUR_HEIGHT+7}px">${label}</div>`;
+  }
+  html += '</div>';
+
+  for(const d of days){
+    const date=localDate(d);
+    const dayBookings=bookings.filter(b=>b.date===date);
+    const arranged=layoutOverlaps(dayBookings);
+    html += `<div class="day-column ${date===today?'today-col':''}" data-date="${date}" aria-label="${esc(displayDate(date))}">`;
+    for(const item of arranged){
+      const b=item.booking;
+      const inst=instrumentById(b.instrumentId);
+      const owned=isOwned(b);
+      const startMin=minutes(b.start), endMin=minutes(b.end);
+      const top=(startMin/60)*HOUR_HEIGHT+1;
+      const height=Math.max(10,((endMin-startMin)/60)*HOUR_HEIGHT-2);
+      const left=(item.lane/item.laneCount)*100;
+      const width=100/item.laneCount;
+      const title=`${displayTime(b.start)}–${displayTime(b.end)} | ${b.bookedBy} | ${inst?.name||'Instrument'}`;
+      const compact=height<34;
+      html += `<div class="booking ${COLORS[colorIndex(b.instrumentId)]} ${owned?'owned':''}" data-booking-id="${esc(b.id)}" title="${esc(title)}" style="top:${top}px;height:${height}px;left:calc(${left}% + 3px);width:calc(${width}% - 6px)"><span class="booking-title">${esc(b.bookedBy)} · ${esc(inst?.name||'Instrument')}</span>${compact?'':`<span class="booking-time">${esc(displayTime(b.start))}–${esc(displayTime(b.end))}</span>`}</div>`;
     }
     html += '</div>';
   }
+  html += '</div>';
   $('cal-body').innerHTML=html;
-  document.querySelectorAll('.cal-cell').forEach(cell=>cell.addEventListener('click',e=>{
+
+  document.querySelectorAll('.day-column').forEach(column=>column.addEventListener('click',e=>{
     if(e.target.closest('.booking')) return;
-    openBooking(null,cell.dataset.date,Number(cell.dataset.hour));
+    const rect=column.getBoundingClientRect();
+    const y=Math.max(0,Math.min(rect.height-1,e.clientY-rect.top));
+    let startMinutes=Math.floor((y/HOUR_HEIGHT*60)/15)*15;
+    if(startMinutes>=23*60+45) startMinutes=23*60;
+    openBooking(null,column.dataset.date,startMinutes);
   }));
   document.querySelectorAll('.booking').forEach(el=>el.addEventListener('click',e=>{
     e.stopPropagation();
     const booking=bookings.find(b=>b.id===el.dataset.bookingId);
-    if(!booking) return;
-    if(isOwned(booking)) openBooking(booking);
-    else toast(`${booking.start}–${booking.end} is reserved by ${booking.bookedBy}.`);
+    if(booking) openBookingDetails(booking);
   }));
 }
+function openBookingDetails(booking){
+  viewingId=booking.id;
+  const inst=instrumentById(booking.instrumentId);
+  const owned=isOwned(booking);
+  $('detail-instrument').textContent=inst?.name||'Unknown instrument';
+  $('detail-user').textContent=booking.bookedBy||'Not provided';
+  $('detail-date').textContent=displayDate(booking.date);
+  $('detail-time').textContent=`${displayTime(booking.start)} – ${displayTime(booking.end)}`;
+  $('detail-purpose').textContent=booking.purpose||'No purpose or notes provided.';
+  $('detail-edit-btn').style.display=owned?'':'none';
+  $('detail-cancel-btn').style.display=owned?'':'none';
+  $('detail-owner-note').textContent=owned?'This reservation was created from this browser, so you can edit or cancel it.':'This reservation is view-only from this browser.';
+  $('details-modal').classList.add('open');
+}
+function closeBookingDetails(){
+  $('details-modal').classList.remove('open');
+  viewingId=null;
+}
+function editSelectedBooking(){
+  const booking=bookings.find(b=>b.id===viewingId);
+  if(!booking||!isOwned(booking)){toast('You can only edit bookings created from this browser.',true);return;}
+  closeBookingDetails();
+  openBooking(booking);
+}
+function cancelSelectedBooking(){
+  const id=viewingId;
+  closeBookingDetails();
+  cancelBooking(id);
+}
 
-function openBooking(booking=null,date='',hour=null){
+function openBooking(booking=null,date='',startMinutes=null){
   editingId=booking?.id||null;
   $('modal-title').textContent=booking?'Edit Booking':'Book Instrument';
   $('bk-instrument').value=booking?.instrumentId||'';
   $('bk-date').value=booking?.date||date||localDate(new Date());
-  $('bk-start').value=booking?.start||(hour!==null?`${String(hour).padStart(2,'0')}:00`:'09:00');
-  $('bk-end').value=booking?.end||(hour!==null?(hour>=23?'23:45':`${String(hour+1).padStart(2,'0')}:00`):'10:00');
+  let defaultStart=startMinutes===null?9*60:startMinutes;
+  let defaultEnd=Math.min(defaultStart+60,23*60+45);
+  if(defaultEnd<=defaultStart){defaultStart=23*60;defaultEnd=23*60+45;}
+  $('bk-start').value=booking?.start||timeFromMinutes(defaultStart);
+  $('bk-end').value=booking?.end||timeFromMinutes(defaultEnd);
   $('bk-user').value=booking?.bookedBy||localStorage.getItem('dl_booking_name')||'';
   $('bk-purpose').value=booking?.purpose||'';
   $('delete-btn').style.display=booking?'':'none';
@@ -224,8 +314,8 @@ async function saveBooking(){
   finally{$('save-btn').disabled=false;}
 }
 
-async function cancelBooking(){
-  const booking=bookings.find(b=>b.id===editingId);
+async function cancelBooking(bookingId=editingId){
+  const booking=bookings.find(b=>b.id===bookingId);
   if(!booking||!isOwned(booking)){toast('You cannot cancel this booking.',true);return;}
   if(!confirm(`Cancel the ${booking.start}–${booking.end} booking?`)) return;
   try{
@@ -244,6 +334,10 @@ async function cancelBooking(){
 
 window.openBooking=openBooking;
 window.closeBooking=closeBooking;
+window.openBookingDetails=openBookingDetails;
+window.closeBookingDetails=closeBookingDetails;
+window.editSelectedBooking=editSelectedBooking;
+window.cancelSelectedBooking=cancelSelectedBooking;
 window.saveBooking=saveBooking;
 window.cancelBooking=cancelBooking;
 window.changeWeek=delta=>{weekOffset+=delta;render();};
@@ -262,7 +356,7 @@ async function init(){
       render();
     },err=>{console.error(err);toast('Cannot read bookings. Check Firestore rules.',true);});
     $('loading').style.display='none';
-    setTimeout(()=>{$('cal-scroll').scrollTop=52*8;},150);
+    setTimeout(()=>{$('cal-scroll').scrollTop=HOUR_HEIGHT*8;},150);
   }catch(err){console.error(err);$('loading-text').textContent='Unable to connect. Enable Firebase Anonymous Authentication and check Firestore rules.';toast('Firebase connection failed.',true);}
 }
 init();
@@ -280,11 +374,27 @@ init();
     <div><h1>Instrument Booking Calendar</h1><p>Review availability and reserve lab instruments without signing into the main portal.</p><span class="public-badge">● Public booking page</span></div>
     <button class="btn primary" onclick="openBooking()">＋ Book Slot</button>
   </section>
-  <div class="notice">This page downloads only the public <strong>instruments</strong> and <strong>bookings</strong> records. Internal 15-minute lock documents are touched transactionally to prevent simultaneous double-booking, but are never listed or displayed. You can edit or cancel reservations created from this browser; other reservations are view-only.</div>
+  <div class="notice">This page downloads only the public <strong>instruments</strong> and <strong>bookings</strong> records. Internal 15-minute lock documents are touched transactionally to prevent simultaneous double-booking, but are never listed or displayed. Click any reservation to see who booked which instrument and when. You can edit or cancel reservations created from this browser; other reservations are view-only.</div>
   <div class="cal-nav"><div class="cal-nav-title" id="week-title">Week of…</div><div class="btn-row"><button class="btn" onclick="changeWeek(-1)">← Prev</button><button class="btn primary" onclick="todayWeek()">Today</button><button class="btn" onclick="changeWeek(1)">Next →</button></div></div>
   <div class="legend" id="legend"></div>
   <div class="cal-wrap"><div class="cal-header" id="cal-header"></div><div class="cal-scroll" id="cal-scroll"><div class="cal-body" id="cal-body"></div></div></div>
 </main>
+<div class="modal-overlay" id="details-modal" onclick="if(event.target===this)closeBookingDetails()">
+  <div class="modal">
+    <div class="modal-header"><h2>Booking Details</h2><button class="close" onclick="closeBookingDetails()">✕</button></div>
+    <div class="modal-body">
+      <div class="detail-list">
+        <div class="detail-row"><div class="detail-label">Instrument</div><div class="detail-value" id="detail-instrument"></div></div>
+        <div class="detail-row"><div class="detail-label">Reserved by</div><div class="detail-value" id="detail-user"></div></div>
+        <div class="detail-row"><div class="detail-label">Date</div><div class="detail-value" id="detail-date"></div></div>
+        <div class="detail-row"><div class="detail-label">Time</div><div class="detail-value" id="detail-time"></div></div>
+        <div class="detail-row"><div class="detail-label">Purpose / Notes</div><div class="detail-value detail-purpose" id="detail-purpose"></div></div>
+      </div>
+      <div class="detail-owner" id="detail-owner-note"></div>
+    </div>
+    <div class="modal-footer"><button class="btn danger" id="detail-cancel-btn" onclick="cancelSelectedBooking()" style="display:none">Cancel Booking</button><button class="btn" onclick="closeBookingDetails()">Close</button><button class="btn primary" id="detail-edit-btn" onclick="editSelectedBooking()" style="display:none">Edit Booking</button></div>
+  </div>
+</div>
 <div class="modal-overlay" id="booking-modal" onclick="if(event.target===this)closeBooking()">
   <div class="modal">
     <div class="modal-header"><h2 id="modal-title">Book Instrument</h2><button class="close" onclick="closeBooking()">✕</button></div>
