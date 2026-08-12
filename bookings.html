@@ -263,8 +263,8 @@ async function saveBooking(){
   const inst=instrumentById(instrumentId);
   if(!inst){toast('The selected instrument is unavailable.',true);return;}
   const duration=(minutes(end)-minutes(start))/60;
-  if(inst.maxHours && duration>Number(inst.maxHours)){toast(`This instrument may be booked for at most ${inst.maxHours} hours.`,true);return;}
-  $('save-btn').disabled=true;
+  // if(inst.maxHours && duration>Number(inst.maxHours)){toast(`This instrument may be booked for at most ${inst.maxHours} hours.`,true);return;}
+  // $('save-btn').disabled=true;
   try{
     const fresh=await getFreshBookings();
     const conflict=fresh.find(b=>b.id!==editingId && b.instrumentId===instrumentId && b.date===date && minutes(start)<minutes(b.end) && minutes(end)>minutes(b.start));
